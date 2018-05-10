@@ -14,7 +14,7 @@ while True:
     try:
         text = session.prompt()
         if len(text) == 1:
-            session.change_mode(text)
+            session.activate_mode(text)
     except EOFError:
         sys.exit(0)
     except KeyboardInterrupt:

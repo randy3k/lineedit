@@ -51,6 +51,7 @@ class ModalPromptSession(PromptSession):
     def _check_args(self, kwargs):
         ensure_empty(kwargs, "message")
         ensure_empty(kwargs, "default")
+        ensure_empty(kwargs, "key_bindings")
         if "history" in kwargs:
             assert isinstance(kwargs["history"], ModalHistory)
 
@@ -114,17 +115,20 @@ class ModalPromptSession(PromptSession):
             return None
 
     def change_mode(self, name, force=False, redraw=True):
-        if name in self.modes:
-            mode = self._current_mode
-            if mode and (mode.switchable_from or force):
-                newmode = self.modes[name]
-                if newmode and (newmode.switchable_to or force):
-                    self._current_mode = newmode
-                    self.activate_mode(name)
-                    if redraw:
-                        self.app._redraw()
-        else:
+        if name not in self.modes:
             raise Exception("no such mode")
+
+        mode = self._current_mode
+        newmode = self.modes[name]
+        if mode and (mode.switchable_from or force):
+            if newmode and (newmode.switchable_to or force):
+                self._current_mode = newmode
+                self.activate_mode(name)
+                if redraw:
+                    self.app._redraw()
+                    self.app.layout.reset()
+                    self.app.key_processor.reset()
+                    self.app.vi_state.reset()
 
     @property
     def current_mode(self):
@@ -145,6 +149,8 @@ class ModalPromptSession(PromptSession):
         del self.modes[name]
 
     def activate_mode(self, name):
+        if name not in self.modes:
+            return
         mode = self.modes[name]
         for name in self._fields:
             if name in mode.kwargs:
