@@ -136,7 +136,6 @@ class ModalPromptSession(PromptSession):
         newmode = self.modes[name]
         if mode and (mode.switchable_from or force):
             if newmode and (newmode.switchable_to or force):
-                self._current_mode = newmode
                 self.activate_mode(name)
                 if redraw:
                     self.app._redraw()
@@ -156,7 +155,6 @@ class ModalPromptSession(PromptSession):
         assert isinstance(mode, Mode)
         self.modes[mode.name] = mode
         if len(self.modes) == 1:
-            self._current_mode = mode
             self.activate_mode(mode.name)
 
     def unregister_mode(self, name):
@@ -165,7 +163,10 @@ class ModalPromptSession(PromptSession):
     def activate_mode(self, name):
         if name not in self.modes:
             return
+
         mode = self.modes[name]
+        self._current_mode = mode
+
         for name in self._fields:
             if name is not "key_bindings":
                 if name in mode.kwargs:
