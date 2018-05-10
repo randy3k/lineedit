@@ -1,12 +1,15 @@
 from __future__ import unicode_literals
 import datetime
 import os
-from prompt_toolkit.history import History, InMemoryHistory
+from prompt_toolkit.application.current import get_app
+from prompt_toolkit.history import History, InMemoryHistory, DynamicHistory
 
-from .mode import current_mode
+
+class ModalHistory(History):
+    pass
 
 
-class ModalInMemoryHistory(InMemoryHistory):
+class ModalInMemoryHistory(InMemoryHistory, ModalHistory):
 
     def __init__(self, include_modes=None, exclude_modes=[]):
         self.strings = []
@@ -15,7 +18,8 @@ class ModalInMemoryHistory(InMemoryHistory):
         self.exclude_modes = exclude_modes
 
     def append(self, string):
-        mode = current_mode()
+        app = get_app()
+        mode = app.session.current_mode_name
         if not mode:
             return
 
@@ -30,7 +34,7 @@ class ModalInMemoryHistory(InMemoryHistory):
         self.modes.append(mode)
 
 
-class ModalFileHistory(History):
+class ModalFileHistory(ModalHistory):
     """
     :class:`.History` class that stores all strings in a file.
     """
@@ -71,7 +75,8 @@ class ModalFileHistory(History):
                 add()
 
     def append(self, string):
-        mode = current_mode()
+        app = get_app()
+        mode = app.session.current_mode_name
         if not mode:
             return
 
@@ -103,3 +108,10 @@ class ModalFileHistory(History):
 
     def __len__(self):
         return len(self.strings)
+
+
+class DynamicModalHistory(DynamicHistory):
+
+    @property
+    def modes(self):
+        return self.get_history().modes

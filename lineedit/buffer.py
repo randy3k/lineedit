@@ -13,13 +13,9 @@ class ModalBuffer(Buffer):
 
     def _change_prompt_mode(self, index, redraw=True):
         if index < len(self.history.modes):
+            mode = self.history.modes[index]
             app = get_app()
-            if app.session.prompt_mode in app.session.top_level_modes:
-                mode = self.history.modes[index]
-                if mode and mode in app.session.top_level_modes:
-                    app.session.prompt_mode = mode
-                    if redraw:
-                        app._redraw()
+            app.session.change_mode(mode, redraw=redraw)
 
     def _is_end_of_buffer(self):
         return self.cursor_position == len(self.text)
@@ -67,7 +63,7 @@ class ModalBuffer(Buffer):
             self.search_history = []
 
         # modified by rtichoke
-        no_duplicates = get_app().mp.history_search_no_duplicates and count == 1
+        no_duplicates = get_app().session.history_search_no_duplicates and count == 1
 
         def search_once(working_index, document):
             """
@@ -161,7 +157,7 @@ class ModalBuffer(Buffer):
     # def append_to_history(self):
     #     app = get_app()
     #     if app.session.append_to_history:
-    #         mode = app.session.prompt_mode
+    #         mode = app.session.current_mode
     #         if self.text and \
     #             (not len(self.history) or self.history[-1] != self.text or
     #                 mode != self.history.modes[-1]):
