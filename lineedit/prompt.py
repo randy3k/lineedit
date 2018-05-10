@@ -47,7 +47,6 @@ class ModalPromptSession(PromptSession):
     _current_mode = None
     _key_bindings = None
     modes = OrderedDict()
-    history_search_no_duplicates = False
     add_history = True
     before_accept = None
 
@@ -67,7 +66,6 @@ class ModalPromptSession(PromptSession):
 
     def _filter_args(self, kwargs):
         for key in (
-                "history_search_no_duplicates",
                 "add_history",
                 "before_accept"):
             if key in kwargs:
