@@ -154,11 +154,11 @@ class ModalBuffer(Buffer):
         else:
             super(ModalBuffer, self).auto_down(count, go_to_start_of_line_if_history_changes)
 
-    # def append_to_history(self):
-    #     app = get_app()
-    #     if app.session.append_to_history:
-    #         mode = app.session.current_mode
-    #         if self.text and \
-    #             (not len(self.history) or self.history[-1] != self.text or
-    #                 mode != self.history.modes[-1]):
-    #             self.history.append(self.text)
+    def append_to_history(self):
+        app = get_app()
+        if app.session.add_history:
+            mode = app.session.current_mode_name
+            if self.text and \
+                (not len(self.history) or self.history[-1] != self.text or
+                    mode != self.history.modes[-1]):
+                self.history.append(self.text)

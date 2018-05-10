@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import datetime
 import os
 from prompt_toolkit.application.current import get_app
-from prompt_toolkit.history import History, InMemoryHistory, DynamicHistory
+from prompt_toolkit.history import History, InMemoryHistory, FileHistory, DynamicHistory
 
 
 class ModalHistory(History):
@@ -34,7 +34,7 @@ class ModalInMemoryHistory(InMemoryHistory, ModalHistory):
         self.modes.append(mode)
 
 
-class ModalFileHistory(ModalHistory):
+class ModalFileHistory(FileHistory, ModalHistory):
     """
     :class:`.History` class that stores all strings in a file.
     """

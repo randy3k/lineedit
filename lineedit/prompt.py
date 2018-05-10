@@ -18,11 +18,13 @@ class Mode(object):
     def __init__(
             self,
             name,
+            is_sticky=True,
             switchable_to=True,
             switchable_from=True,
             **kwargs):
 
         self.name = name
+        self.is_sticky = is_sticky
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
         self.kwargs = kwargs
@@ -34,30 +36,31 @@ def ensure_empty(kwargs, name):
 
 
 class ModalPromptSession(PromptSession):
-    modes = OrderedDict()
     _current_mode = None
+    modes = OrderedDict()
     history_search_no_duplicates = False
+    add_history = True
 
     def __init__(self, *args, **kwargs):
         self._check_args(kwargs)
         self._filter_args(kwargs)
-
         if "history" not in kwargs or not kwargs["history"]:
             kwargs["history"] = ModalInMemoryHistory()
-
         super(ModalPromptSession, self).__init__(*args, **kwargs)
 
     def _check_args(self, kwargs):
         ensure_empty(kwargs, "message")
         ensure_empty(kwargs, "default")
-
-        if "history" in kwargs and kwargs["history"]:
+        if "history" in kwargs:
             assert isinstance(kwargs["history"], ModalHistory)
 
     def _filter_args(self, kwargs):
-        if "history_search_no_duplicates" in kwargs:
-            self.history_search_no_duplicates = kwargs["history_search_no_duplicates"]
-            del kwargs["history_search_no_duplicates"]
+        for key in (
+                "history_search_no_duplicates",
+                "add_history"):
+            if key in kwargs:
+                setattr(self, key, kwargs[key])
+                del kwargs[key]
 
     def _create_default_buffer(self):
         """
@@ -152,4 +155,12 @@ class ModalPromptSession(PromptSession):
         self._filter_args(kwargs)
         if args:
             raise Exception("positional arguments are deprecated")
-        return super(ModalPromptSession, self).prompt(**kwargs)
+        result = super(ModalPromptSession, self).prompt(**kwargs)
+
+        # prompt will restore settings, we need to reactivate current mode
+        if self.current_mode.is_sticky:
+            self.activate_mode(self.current_mode_name)
+        else:
+            self.activate_mode(self.main_mode.name)
+
+        return result
