@@ -6,6 +6,7 @@ from prompt_toolkit.auto_suggest import DynamicAutoSuggest
 from prompt_toolkit.completion import DynamicCompleter, ThreadedCompleter
 from prompt_toolkit.enums import DEFAULT_BUFFER
 from prompt_toolkit.filters import Condition
+from prompt_toolkit.key_binding.key_bindings import DynamicKeyBindings, merge_key_bindings
 from prompt_toolkit.validation import DynamicValidator
 
 from prompt_toolkit.shortcuts.prompt import _true, CompleteStyle
@@ -15,18 +16,25 @@ from .history import ModalHistory, ModalInMemoryHistory, DynamicModalHistory
 
 
 class Mode(object):
+    key_bindings = None
+    prompt_key_bindings = None
+
     def __init__(
             self,
             name,
             is_sticky=True,
             switchable_to=True,
             switchable_from=True,
+            prompt_key_bindings=None,
             **kwargs):
 
         self.name = name
         self.is_sticky = is_sticky
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
+        self.prompt_key_bindings = prompt_key_bindings
+        if "key_bindings" in kwargs:
+            self.key_bindings = kwargs["key_bindings"]
         self.kwargs = kwargs
 
 
@@ -37,9 +45,11 @@ def ensure_empty(kwargs, name):
 
 class ModalPromptSession(PromptSession):
     _current_mode = None
+    _key_bindings = None
     modes = OrderedDict()
     history_search_no_duplicates = False
     add_history = True
+    before_accept = None
 
     def __init__(self, *args, **kwargs):
         self._check_args(kwargs)
@@ -58,7 +68,8 @@ class ModalPromptSession(PromptSession):
     def _filter_args(self, kwargs):
         for key in (
                 "history_search_no_duplicates",
-                "add_history"):
+                "add_history",
+                "before_accept"):
             if key in kwargs:
                 setattr(self, key, kwargs[key])
                 del kwargs[key]
@@ -71,6 +82,9 @@ class ModalPromptSession(PromptSession):
 
         # Create buffers list.
         def accept(buff):
+            if self.before_accept:
+                self.before_accept(buff)
+
             # remember the last working index
             buff.last_working_index = buff.working_index
 
@@ -153,8 +167,16 @@ class ModalPromptSession(PromptSession):
             return
         mode = self.modes[name]
         for name in self._fields:
-            if name in mode.kwargs:
-                setattr(self, name, mode.kwargs[name])
+            if name is not "key_bindings":
+                if name in mode.kwargs:
+                    setattr(self, name, mode.kwargs[name])
+
+        self.key_bindings = merge_key_bindings([
+            DynamicKeyBindings(lambda: self.current_mode.prompt_key_bindings),
+            merge_key_bindings([
+                m.key_bindings for m in self.modes.values() if m.key_bindings
+            ])
+        ])
 
     def prompt(self, *args, **kwargs):
         self._check_args(kwargs)
