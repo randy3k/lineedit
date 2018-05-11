@@ -11,11 +11,11 @@ class ModalBuffer(Buffer):
     last_search_history = None
     search_history = []
 
-    def _change_prompt_mode(self, index, redraw=True):
+    def _change_prompt_mode(self, index):
         if index < len(self.history.modes):
             mode = self.history.modes[index]
             app = get_app()
-            app.session.change_mode(mode, redraw=redraw)
+            app.session.change_mode(mode)
 
     def _is_end_of_buffer(self):
         return self.cursor_position == len(self.text)
@@ -127,7 +127,7 @@ class ModalBuffer(Buffer):
             working_index, document = result
             self.last_search_direction = direction
             self.last_search_history = self._working_lines[working_index]
-            self._change_prompt_mode(result[0], redraw=False)
+            self._change_prompt_mode(result[0])
             return (working_index, document.cursor_position)
         else:
             self.last_search_direction = None

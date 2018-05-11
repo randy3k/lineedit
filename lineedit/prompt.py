@@ -126,7 +126,7 @@ class ModalPromptSession(PromptSession):
         else:
             return None
 
-    def change_mode(self, name, force=False, redraw=True):
+    def change_mode(self, name, force=False):
         if name not in self.modes:
             raise Exception("no such mode")
 
@@ -135,11 +135,6 @@ class ModalPromptSession(PromptSession):
         if mode and (mode.switchable_from or force):
             if newmode and (newmode.switchable_to or force):
                 self.activate_mode(name)
-                if redraw:
-                    self.app._redraw()
-                    self.app.layout.reset()
-                    self.app.key_processor.reset()
-                    self.app.vi_state.reset()
 
     @property
     def current_mode(self):
