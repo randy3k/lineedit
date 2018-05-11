@@ -27,6 +27,7 @@ setup(
     url='https://github.com/randy3k/lineedit',
     description='An readline library based on prompt_toolkit which supports multiple modes',
     long_description=get_long_description(),
+    long_description_content_type="text/markdown",
     packages=find_packages('.'),
     install_requires=[
         'pygments',
