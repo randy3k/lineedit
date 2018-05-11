@@ -1,0 +1,23 @@
+language: python
+python:
+  - 2.7
+  - 3.5
+
+install:
+  - pip install .
+
+script:
+  - python -c "import lineedit"
+
+deploy:
+  provider: pypi
+  user: randy3k
+  password:
+    secure: ENtocLLs/vQnXFrtvGvl+Mh45/4a56Bw25mkctt4yV7bfpAayKDT5ualyxiI/TFljTMS+2LhNN1YIoSGFgyI5G5SoAosOFxA5uhDSJMMohQRu6X2Qp+oZaUXbbT/OI3Nul8pL87LKlcgO4alZ23/mVrYSbbp3oTSRv2s0Rk4x5YIFQ43ZH04Gk693ZmPIIrth2Y62r+7WRSGLTc3DW9yk9UZL/+0Q6bYZfrijd5m8qHdfqI1ZP/BuU76Dr2v9Bw7bKW/P+nv1gUoYHsYv4AP9A+fep3mEIgTdJ7oh+3rqM9j9nB8mJgIhP84t52WJkcjOJzmxu//JatwPPLFYMKjIHATlaEvY1EshAyYL1GoDXRMiPMjpCLe8dD8dqPr+3MLQwCcOY3orS4EFlNUq/T5nwquFP3XnYSQTfPL/RLPbPh3Xfks8AXBNjkW281gXhV1qDwlkMeV1e5gdE7dwkPSOmC26iXd9/N/CkC67tjPYaokSN+mno6IbI+8/0hGTjZ9Ts4dVKR5preTmPQMuHltAiqh+JYkc1sadjAXbSjMft2mgO7+YmVzMjv8/KmR0fIHNCVM4CtiYuFiyv8Sd+QtwWE3EUR/SLfquhltucHrLAny0PsH9rN5RNYQXGpWx/gaqgbw+XGJeimr7QfrZDU7DDY6jGO+nJsCz/0i9HX8Mb8=
+  on:
+    tags: true
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
