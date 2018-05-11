@@ -46,6 +46,7 @@ def ensure_empty(kwargs, name):
 class ModalPromptSession(PromptSession):
     _current_mode = None
     _key_bindings = None
+    _default_settings = {}
     modes = OrderedDict()
     add_history = True
     before_accept = None
@@ -56,6 +57,7 @@ class ModalPromptSession(PromptSession):
         if "history" not in kwargs or not kwargs["history"]:
             kwargs["history"] = ModalInMemoryHistory()
         super(ModalPromptSession, self).__init__(*args, **kwargs)
+        self._backup_settings()
 
     def _check_args(self, kwargs):
         ensure_empty(kwargs, "message")
@@ -160,6 +162,7 @@ class ModalPromptSession(PromptSession):
         mode = self.modes[name]
         self._current_mode = mode
 
+        self._restore_settings()
         for name in self._fields:
             if name is not "key_bindings":
                 if name in mode.kwargs:
@@ -172,12 +175,30 @@ class ModalPromptSession(PromptSession):
             ])
         ])
 
+    def _backup_settings(self):
+        for name in self._fields:
+            self._default_settings[name] = getattr(self, name)
+
+    def _restore_settings(self):
+        for name in self._fields:
+            setattr(self, name, self._default_settings[name])
+
     def prompt(self, *args, **kwargs):
         self._check_args(kwargs)
         self._filter_args(kwargs)
         if args:
             raise Exception("positional arguments are deprecated")
-        result = super(ModalPromptSession, self).prompt(**kwargs)
+
+        backup = self._default_settings.copy()
+        for name in self._fields:
+            if name in kwargs:
+                value = kwargs[name]
+                if value is not None:
+                    setattr(self._default_settings, name, value)
+        try:
+            result = super(ModalPromptSession, self).prompt(**kwargs)
+        finally:
+            self._default_settings = backup.copy()
 
         # prompt will restore settings, we need to reactivate current mode
         if self.current_mode.is_sticky:
