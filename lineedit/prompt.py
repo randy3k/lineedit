@@ -22,14 +22,12 @@ class Mode(object):
     def __init__(
             self,
             name,
-            is_sticky=True,
             switchable_to=True,
             switchable_from=True,
             prompt_key_bindings=None,
             **kwargs):
 
         self.name = name
-        self.is_sticky = is_sticky
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
         self.prompt_key_bindings = prompt_key_bindings
