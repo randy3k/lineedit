@@ -201,9 +201,6 @@ class ModalPromptSession(PromptSession):
             self._default_settings = backup.copy()
 
         # prompt will restore settings, we need to reactivate current mode
-        if self.current_mode.is_sticky:
-            self.activate_mode(self.current_mode_name)
-        else:
-            self.activate_mode(self.main_mode.name)
+        self.activate_mode(self.current_mode_name)
 
         return result
