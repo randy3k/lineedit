@@ -47,8 +47,11 @@ class ModalBuffer(Buffer):
         app = get_app()
         if i == len(self.history.modes):
             return True
-        elif self.history.modes[i] in app.session.current_mode.history_share:
-            return True
+        else:
+            mode = app.session.current_mode
+            if self.history.modes[i] == mode.name or \
+                    self.history.modes[i] in mode.history_share:
+                return True
         return False
 
     def _history_matches(self, i):

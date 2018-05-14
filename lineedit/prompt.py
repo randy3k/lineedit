@@ -30,8 +30,6 @@ class Mode(object):
 
         self.name = name
         if history_share:
-            if name not in history_share:
-                history_share.append(name)
             self.history_share = history_share
         else:
             self.history_share = [name]
