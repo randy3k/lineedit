@@ -33,5 +33,12 @@ setup(
         'pygments',
         'six',
         'wcwidth'
+    ],
+    setup_requires=[
+        "pytest-runner"
+    ],
+    tests_require=[
+        "pytest",
+        "pexpect"
     ]
 )
