@@ -26,15 +26,26 @@ jobs:
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
       - run: |
           python setup.py sdist
+          sudo pip install twine
           twine upload dist/*
 
 
 workflows:
   version: 2
-  build_and_test:
+  test:
     jobs:
       - test-py27
       - test-py35
+  deploy:
+    jobs:
+      - test-py27:
+          filters:
+            tags:
+              only: /^v.*/
+      - test-py35:
+          filters:
+            tags:
+              only: /^v.*/
       - deploy-to-pypi:
           requires:
             - test-py27
