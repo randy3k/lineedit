@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import sys
 from lineedit import Mode, ModalPromptSession
 from prompt_toolkit.key_binding.key_bindings import KeyBindings
