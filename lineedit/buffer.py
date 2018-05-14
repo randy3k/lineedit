@@ -43,14 +43,18 @@ class ModalBuffer(Buffer):
         else:
             self.history_search_text = None
 
-    def _history_matches(self, i):
+    def _history_mode_matches(self, i):
         app = get_app()
+        if i == len(self.history.modes):
+            return True
+        elif self.history.modes[i] in app.session.current_mode.history_share:
+            return True
+        return False
+
+    def _history_matches(self, i):
         if self.history_search_text is None or \
                 self._working_lines[i].startswith(self.history_search_text):
-            if i == len(self.history.modes):
-                return True
-            elif self.history.modes[i] in app.session.current_mode.history_share:
-                return True
+            return self._history_mode_matches(i)
         return False
 
     def history_forward(self, count=1):
@@ -86,7 +90,8 @@ class ModalBuffer(Buffer):
         # modified by rtichoke
         self._set_working_mode()
         self._is_searching = True
-        no_duplicates = get_app().session.history_search_no_duplicates and count == 1
+        app = get_app()
+        no_duplicates = app.session.history_search_no_duplicates and count == 1
 
         def search_once(working_index, document):
             """
@@ -110,7 +115,9 @@ class ModalBuffer(Buffer):
                         i %= len(self._working_lines)
 
                         # modified by rtichoke
-                        if not no_duplicates or self._working_lines[i] not in self.search_history:
+                        if self._history_mode_matches(i) and \
+                                (not no_duplicates or
+                                    self._working_lines[i] not in self.search_history):
                             document = Document(self._working_lines[i], 0)
                             new_index = document.find(text, include_current_position=True,
                                                       ignore_case=ignore_case)
@@ -130,7 +137,9 @@ class ModalBuffer(Buffer):
                         i %= len(self._working_lines)
 
                         # modified by rtichoke
-                        if not no_duplicates or self._working_lines[i] not in self.search_history:
+                        if self._history_mode_matches(i) and \
+                                (not no_duplicates or
+                                    self._working_lines[i] not in self.search_history):
                             document = Document(self._working_lines[i], len(self._working_lines[i]))
                             new_index = document.find_backwards(
                                 text, ignore_case=ignore_case)
