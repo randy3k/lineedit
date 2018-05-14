@@ -1,0 +1,50 @@
+version: 2
+
+jobs:
+  test-py27:
+    docker:
+      - image: circleci/python:2.7-jessie
+    steps:
+      - checkout
+      - run: sudo pip install -e .
+      - run: sudo pip install pytest
+      - run: pytest
+  test-py35:
+    docker:
+      - image: circleci/python:3.5-jessie-node
+    steps:
+      - checkout
+      - run: sudo pip install -e .
+      - run: sudo pip install pytest
+      - run: pytest
+  deploy-to-pypi:
+    docker:
+      - image: circleci/python
+    steps:
+      - checkout
+      - run:
+          name: init .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = randy3k" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run: |
+          python setup.py sdist
+          twine upload dist/*
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - test-py27
+      - test-py35
+      - deploy-to-pypi:
+          requires:
+            - test-py27
+            - test-py35
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
