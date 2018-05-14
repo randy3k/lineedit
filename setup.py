@@ -39,6 +39,7 @@ setup(
     ],
     tests_require=[
         "pytest",
+        "pyte",
         "pexpect"
     ]
 )

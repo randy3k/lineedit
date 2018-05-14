@@ -1,19 +1,45 @@
 from __future__ import unicode_literals
 import os
 import sys
-import pexpect
-
+import pyte
+import ptyprocess
+import threading
+import time
 
 examples = os.path.join(os.path.dirname(__file__), "..", "examples")
 
 
-def test_simple():
-    p = pexpect.spawnu(sys.executable, [os.path.join(examples, "keybinds.py")])
-    assert p.readline().startswith("Enter [p/q/r] to change mode:")
-    assert p.expect("p> ", timeout=5) == 0
-    p.send("q\n")
-    assert p.expect("q> ", timeout=5) == 0
-    p.send("r\n")
-    assert p.expect("r> ", timeout=5) == 0
-    p.send("p\n")
-    assert p.expect("p> ", timeout=5) == 0
+def test_keybinds():
+    p = ptyprocess.PtyProcess.spawn([sys.executable, os.path.join(examples, "keybinds.py")])
+    screen = pyte.Screen(80, 24)
+    screen.write_process_input = lambda s: p.write(s.encode())
+    stream = pyte.ByteStream(screen)
+    loop = [True]
+
+    def reader():
+        while loop[0]:
+            try:
+                data = p.read(1024)
+            except EOFError:
+                break
+            if data:
+                stream.feed(data)
+
+    try:
+        t = threading.Thread(target=reader)
+        t.start()
+
+        time.sleep(1)
+        assert screen.display[0].startswith("Enter [p/q/r] to change mode:")
+        assert (screen.cursor.x, screen.cursor.y) == (3, 1)
+        p.write("q".encode())
+        time.sleep(1)
+        assert screen.display[1].startswith("q>")
+        p.write("r".encode())
+        time.sleep(1)
+        assert screen.display[1].startswith("r>")
+        p.write("p".encode())
+        time.sleep(1)
+        assert screen.display[1].startswith("p>")
+    finally:
+        p.terminate(force=True)
