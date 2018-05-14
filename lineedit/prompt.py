@@ -22,12 +22,19 @@ class Mode(object):
     def __init__(
             self,
             name,
+            history_share=[],
             switchable_to=True,
             switchable_from=True,
             prompt_key_bindings=None,
             **kwargs):
 
         self.name = name
+        if history_share:
+            if name not in history_share:
+                history_share.append(name)
+            self.history_share = history_share
+        else:
+            self.history_share = [name]
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
         self.prompt_key_bindings = prompt_key_bindings

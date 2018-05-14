@@ -10,12 +10,17 @@ class ModalBuffer(Buffer):
     last_search_direction = None
     last_search_history = None
     search_history = []
+    _is_searching = False
+    working_mode = None
 
     def _change_prompt_mode(self, index):
+        app = get_app()
         if index < len(self.history.modes):
             mode = self.history.modes[index]
-            app = get_app()
             app.session.change_mode(mode)
+        else:
+            if self.working_mode:
+                app.session.change_mode(self.working_mode)
 
     def _is_end_of_buffer(self):
         return self.cursor_position == len(self.text)
@@ -23,14 +28,30 @@ class ModalBuffer(Buffer):
     def _is_last_history(self):
         return self.working_index == len(self._working_lines) - 1
 
-    def reset(self, document=None, append_to_history=False):
-        self.last_search_history = None
-        self.search_history = []
-        super(ModalBuffer, self).reset(document, append_to_history)
+    def _set_working_mode(self):
+        """
+        Remember the mode of the current working line
+        """
+        app = get_app()
+        if not self._is_searching and self.working_index == len(self.history.modes):
+            self.working_mode = app.session.current_mode_name
 
     def _set_history_search(self):
-        if self._is_last_history():
-            self.history_search_text = self.document.text_before_cursor
+        if self.enable_history_search():
+            if self._is_last_history():
+                self.history_search_text = self.document.text_before_cursor
+        else:
+            self.history_search_text = None
+
+    def _history_matches(self, i):
+        app = get_app()
+        if self.history_search_text is None or \
+                self._working_lines[i].startswith(self.history_search_text):
+            if i == len(self.history.modes):
+                return True
+            elif self.history.modes[i] in app.session.current_mode.history_share:
+                return True
+        return False
 
     def history_forward(self, count=1):
         if len(self.text) == 0 and self._is_last_history() and self.last_working_index >= 0:
@@ -63,6 +84,8 @@ class ModalBuffer(Buffer):
             self.search_history = []
 
         # modified by rtichoke
+        self._set_working_mode()
+        self._is_searching = True
         no_duplicates = get_app().session.history_search_no_duplicates and count == 1
 
         def search_once(working_index, document):
@@ -139,8 +162,10 @@ class ModalBuffer(Buffer):
         super(ModalBuffer, self).apply_search(*args, **kwargs)
         if self.last_search_history and self.last_search_history not in self.search_history:
             self.search_history.append(self.last_search_history)
+        self._is_searching = False
 
     def auto_up(self, count=1, go_to_start_of_line_if_history_changes=False):
+        self._set_working_mode()
         if not self._is_last_history() and self._is_end_of_buffer():
             self.history_backward()
             self.cursor_position = len(self.text)
@@ -148,6 +173,7 @@ class ModalBuffer(Buffer):
             super(ModalBuffer, self).auto_up(count, go_to_start_of_line_if_history_changes)
 
     def auto_down(self, count=1, go_to_start_of_line_if_history_changes=False):
+        self._set_working_mode()
         if not self._is_last_history() and self._is_end_of_buffer():
             self.history_forward()
             self.cursor_position = len(self.text)
@@ -162,3 +188,9 @@ class ModalBuffer(Buffer):
                 (not len(self.history) or self.history[-1] != self.text or
                     mode != self.history.modes[-1]):
                 self.history.append(self.text)
+
+    def reset(self, document=None, append_to_history=False):
+        self._is_searching = False
+        self.last_search_history = None
+        self.search_history = []
+        super(ModalBuffer, self).reset(document, append_to_history)
