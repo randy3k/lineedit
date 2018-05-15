@@ -14,10 +14,9 @@ def test_keybinds():
     screen = pyte.Screen(80, 24)
     screen.write_process_input = lambda s: p.write(s.encode())
     stream = pyte.ByteStream(screen)
-    loop = [True]
 
     def reader():
-        while loop[0]:
+        while True:
             try:
                 data = p.read(1024)
             except EOFError:
