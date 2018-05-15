@@ -32,17 +32,17 @@ def test_keybinds():
         time.sleep(0.5)
         assert screen.display[0].startswith("Enter [p/q] to change mode:")
         assert (screen.cursor.x, screen.cursor.y) == (3, 1)
-        p.write("apple\n".encode())
+        p.write(b"apple\n")
         time.sleep(0.1)
         assert screen.display[1].startswith("p> apple")
         assert screen.display[2].startswith("p>")
-        p.write("q\n".encode())
+        p.write(b"q\n")
         time.sleep(0.1)
         assert screen.display[3].startswith("q>")
         p.write(b"\x1bOA")  # up
         time.sleep(0.1)
         assert screen.display[3].startswith("p> q")
-        p.write(b"\x1bOB")  # up
+        p.write(b"\x1bOB")  # down
         time.sleep(0.1)
         assert screen.display[3].startswith("q>")
         p.write(b"\x1bOA")  # up
