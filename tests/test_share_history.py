@@ -9,7 +9,7 @@ import time
 examples = os.path.join(os.path.dirname(__file__), "..", "examples")
 
 
-def test_keybinds():
+def test_history():
     p = ptyprocess.PtyProcess.spawn([sys.executable, os.path.join(examples, "share_history.py")])
     screen = pyte.Screen(80, 24)
     screen.write_process_input = lambda s: p.write(s.encode())
