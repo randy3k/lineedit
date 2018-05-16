@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 import datetime
 import os
-from prompt_toolkit.application.current import get_app
 from prompt_toolkit.history import History
 
 
@@ -94,7 +93,6 @@ class ModalFileHistory(ModalHistory):
                         lines = []
 
                 add()
-
 
     def append_string(self, string, mode):
         if not mode:

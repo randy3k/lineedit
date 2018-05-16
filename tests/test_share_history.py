@@ -28,28 +28,28 @@ def test_history():
         t = threading.Thread(target=reader)
         t.start()
 
-        time.sleep(0.5)
+        time.sleep(1)
         assert screen.display[0].startswith("Enter [p/q] to change mode:")
         assert (screen.cursor.x, screen.cursor.y) == (3, 1)
         p.write(b"apple\n")
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[1].startswith("p> apple")
         assert screen.display[2].startswith("p>")
         p.write(b"q\n")
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[3].startswith("q>")
         p.write(b"\x1bOA")  # up
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[3].startswith("p> q")
         p.write(b"\x1bOB")  # down
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[3].startswith("q>")
         p.write(b"\x1bOA")  # up
         p.write(b"\x1bOA")  # up
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[3].startswith("p> apple")
         p.sendintr()
-        time.sleep(0.1)
+        time.sleep(0.2)
         assert screen.display[4].startswith("q>")
 
     finally:
