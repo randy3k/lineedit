@@ -2,24 +2,46 @@ from __future__ import unicode_literals
 import datetime
 import os
 from prompt_toolkit.application.current import get_app
-from prompt_toolkit.history import History, InMemoryHistory, FileHistory, DynamicHistory
+from prompt_toolkit.history import History
 
 
 class ModalHistory(History):
-    pass
+    _loaded_strings = []
+    _loaded_modes = []
+
+    def start_loading(self):
+        pass
+
+    def load_history_strings(self):
+        pass
+
+    def get_modes(self):
+        return self._loaded_modes
+
+    def last_string(self):
+        return self._loaded_strings[-1]
+
+    def last_mode(self):
+        return self._loaded_modes[-1]
+
+    def size(self):
+        # we cannot introduce __len__ because prompt has a sentence of
+        # `history or InMemoryHistory()`
+
+        return len(self._loaded_modes)
 
 
-class ModalInMemoryHistory(InMemoryHistory, ModalHistory):
+class ModalInMemoryHistory(ModalHistory):
 
     def __init__(self, include_modes=None, exclude_modes=[]):
-        self.strings = []
-        self.modes = []
         self.include_modes = include_modes
         self.exclude_modes = exclude_modes
+        super(ModalInMemoryHistory, self).__init__()
 
-    def append(self, string):
-        app = get_app()
-        mode = app.session.current_mode_name
+    def get_modes(self):
+        return self._loaded_modes
+
+    def append_string(self, string, mode):
         if not mode:
             return
 
@@ -30,23 +52,22 @@ class ModalInMemoryHistory(InMemoryHistory, ModalHistory):
         if self.include_modes and mode not in self.include_modes:
             return
 
-        self.strings.append(string)
-        self.modes.append(mode)
+        self._loaded_strings.append(string)
+        self._loaded_modes.append(mode)
+
+    def store_string(self, string, mode):
+        pass
 
 
-class ModalFileHistory(FileHistory, ModalHistory):
-    """
-    :class:`.History` class that stores all strings in a file.
-    """
+class ModalFileHistory(ModalHistory):
+
     def __init__(self, filename, include_modes=None, exclude_modes=[]):
-        self.strings = []
-        self.modes = []
+        self.filename = filename
         self.include_modes = include_modes
         self.exclude_modes = exclude_modes
-        self.filename = filename
-        self._load()
+        super(ModalFileHistory, self).__init__()
 
-    def _load(self):
+    def start_loading(self):
         lines = []
         mode = [None]
 
@@ -55,8 +76,8 @@ class ModalFileHistory(FileHistory, ModalHistory):
                 # Join and drop trailing newline.
                 string = ''.join(lines)[:-1]
 
-                self.strings.append(string)
-                self.modes.append(mode[0])
+                self._loaded_strings.append(string)
+                self._loaded_modes.append(mode[0])
 
         if os.path.exists(self.filename):
             with open(self.filename, 'rb') as f:
@@ -74,9 +95,8 @@ class ModalFileHistory(FileHistory, ModalHistory):
 
                 add()
 
-    def append(self, string):
-        app = get_app()
-        mode = app.session.current_mode_name
+
+    def append_string(self, string, mode):
         if not mode:
             return
 
@@ -87,9 +107,11 @@ class ModalFileHistory(FileHistory, ModalHistory):
         if self.include_modes and mode not in self.include_modes:
             return
 
-        self.strings.append(string)
-        self.modes.append(mode)
+        self._loaded_strings.append(string)
+        self._loaded_modes.append(mode)
+        self.store_string(string, mode)
 
+    def store_string(self, string, mode):
         # Save to file.
         with open(self.filename, 'ab') as f:
             def write(t):
@@ -99,19 +121,3 @@ class ModalFileHistory(FileHistory, ModalHistory):
             write('\n# mode: %s\n' % mode)
             for line in string.split('\n'):
                 write('+%s\n' % line)
-
-    def __getitem__(self, key):
-        return self.strings[key]
-
-    def __iter__(self):
-        return iter(self)
-
-    def __len__(self):
-        return len(self.strings)
-
-
-class DynamicModalHistory(DynamicHistory):
-
-    @property
-    def modes(self):
-        return self.get_history().modes

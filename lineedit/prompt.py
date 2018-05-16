@@ -12,7 +12,7 @@ from prompt_toolkit.validation import DynamicValidator
 from prompt_toolkit.shortcuts.prompt import _true, CompleteStyle
 from prompt_toolkit import PromptSession
 from .buffer import ModalBuffer
-from .history import ModalHistory, ModalInMemoryHistory, DynamicModalHistory
+from .history import ModalHistory, ModalInMemoryHistory
 
 
 class Mode(object):
@@ -117,7 +117,7 @@ class ModalPromptSession(PromptSession):
                 ThreadedCompleter(self.completer)
                 if self.complete_in_thread and self.completer
                 else self.completer),
-            history=DynamicModalHistory(lambda: self.history),
+            history=self.history,
             auto_suggest=DynamicAutoSuggest(lambda: self.auto_suggest),
             accept_handler=accept,
             get_tempfile_suffix=lambda: self.tempfile_suffix)

@@ -15,8 +15,9 @@ class ModalBuffer(Buffer):
 
     def _change_prompt_mode(self, index):
         app = get_app()
-        if index < len(self.history.modes):
-            mode = self.history.modes[index]
+        modes = self.history.get_modes()
+        if index < len(modes):
+            mode = modes[index]
             app.session.change_mode(mode)
         else:
             if self.working_mode:
@@ -33,7 +34,7 @@ class ModalBuffer(Buffer):
         Remember the mode of the current working line
         """
         app = get_app()
-        if not self._is_searching and self.working_index == len(self.history.modes):
+        if not self._is_searching and self.working_index == self.history.size():
             self.working_mode = app.session.current_mode_name
 
     def _set_history_search(self):
@@ -45,12 +46,12 @@ class ModalBuffer(Buffer):
 
     def _history_mode_matches(self, i):
         app = get_app()
-        if i == len(self.history.modes):
+        if i == self.history.size():
             return True
         else:
+            modes = self.history.get_modes()
             mode = app.session.current_mode
-            if self.history.modes[i] == mode.name or \
-                    self.history.modes[i] in mode.history_share:
+            if modes[i] == mode.name or modes[i] in mode.history_share:
                 return True
         return False
 
@@ -196,10 +197,11 @@ class ModalBuffer(Buffer):
         app = get_app()
         if app.session.add_history:
             mode = app.session.current_mode_name
-            if self.text and \
-                (not len(self.history) or self.history[-1] != self.text or
-                    mode != self.history.modes[-1]):
-                self.history.append(self.text)
+            if self.text and (
+                    not self.history.size() or
+                    self.history.last_string() != self.text or
+                    mode != self.history.last_mode()):
+                self.history.append_string(self.text, mode)
 
     def reset(self, document=None, append_to_history=False):
         self._is_searching = False
