@@ -5,4 +5,4 @@
 
 It provides some subclasses inherited from [prompt_toolkit](https://github.com/jonathanslenders/python-prompt-toolkit) to mimic Julia [LineEdit.jl](https://github.com/JuliaLang/julia/blob/master/stdlib/REPL/src/LineEdit.jl) with multiple modal support.
 
-As prompt_toolkit v2.0 is not out yet, we also ship a copy of it for now.
+As IPython is blocking the update of prompt_toolkit in python 2.7, we are shipping a copy of prompt-toolkit for python 2 users.

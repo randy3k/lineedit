@@ -11,7 +11,6 @@ from prompt_toolkit.formatted_text import HTML, to_formatted_text
 from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.layout.utils import explode_text_fragments
 from prompt_toolkit.formatted_text.utils import fragment_list_width
-from prompt_toolkit.utils import get_cwidth
 
 __all__ = [
     'Formatter',
@@ -25,6 +24,7 @@ __all__ = [
     'IterationsPerSecond',
     'SpinningWheel',
     'Rainbow',
+    'create_default_formatters',
 ]
 
 
@@ -63,44 +63,44 @@ class Label(Formatter):
     :param suffix: String suffix to be added after the task name, e.g. ': '.
         If no task name was given, no suffix will be added.
     """
-    template = '<label>{label}</label>'
-
     def __init__(self, width=None, suffix=''):
         assert isinstance(suffix, text_type)
         self.width = width
         self.suffix = suffix
 
     def _add_suffix(self, label):
-        if label:
-            label += self.suffix
-        return label
+        label = to_formatted_text(label, style='class:label')
+        return label + [('', self.suffix)]
 
     def format(self, progress_bar, progress, width):
         label = self._add_suffix(progress.label)
-        cwidth = get_cwidth(label)
+        cwidth = fragment_list_width(label)
 
         if cwidth > width:
             # It doesn't fit -> scroll task name.
+            label = explode_text_fragments(label)
             max_scroll = cwidth - width
             current_scroll = int(time.time() * 3 % max_scroll)
             label = label[current_scroll:]
 
-        # It does fit.
-        return HTML(self.template).format(label=label)
+        return label
 
     def get_width(self, progress_bar):
         if self.width:
             return self.width
 
-        all_names = [self._add_suffix(c.label) for c in progress_bar.counters]
-        if all_names:
-            max_widths = max(get_cwidth(name) for name in all_names)
+        all_labels = [self._add_suffix(c.label) for c in progress_bar.counters]
+        if all_labels:
+            max_widths = max(fragment_list_width(l) for l in all_labels)
             return D(preferred=max_widths, max=max_widths)
         else:
             return D()
 
 
 class Percentage(Formatter):
+    """
+    Display the progress as a percentage.
+    """
     template = '<percentage>{percentage:>5}%</percentage>'
 
     def format(self, progress_bar, progress, width):
@@ -112,6 +112,9 @@ class Percentage(Formatter):
 
 
 class Bar(Formatter):
+    """
+    Display the progress bar itself.
+    """
     template = '<bar>{start}<bar-a>{bar_a}</bar-a><bar-b>{bar_b}</bar-b><bar-c>{bar_c}</bar-c>{end}</bar>'
 
     def __init__(self, start='[', end=']', sym_a='=', sym_b='>', sym_c=' ', unknown='#'):
@@ -153,6 +156,9 @@ class Bar(Formatter):
 
 
 class Progress(Formatter):
+    """
+    Display the progress as text.  E.g. "8/20"
+    """
     template = '<current>{current:>3}</current>/<total>{total:>3}</total>'
 
     def format(self, progress_bar, progress, width):
@@ -177,6 +183,9 @@ def _format_timedelta(timedelta):
 
 
 class TimeElapsed(Formatter):
+    """
+    Display the elapsed time.
+    """
     def format(self, progress_bar, progress, width):
         text = _format_timedelta(progress.time_elapsed).rjust(width)
         return HTML('<time-elapsed>{time_elapsed}</time-elapsed>').format(time_elapsed=text)
@@ -189,6 +198,9 @@ class TimeElapsed(Formatter):
 
 
 class TimeLeft(Formatter):
+    """
+    Display the time left.
+    """
     template = '<time-left>{time_left}</time-left>'
     unknown = '?:??:??'
 
@@ -209,6 +221,9 @@ class TimeLeft(Formatter):
 
 
 class IterationsPerSecond(Formatter):
+    """
+    Display the iterations per second.
+    """
     template = '<iterations-per-second>{iterations_per_second:.2f}</iterations-per-second>'
 
     def format(self, progress_bar, progress, width):
@@ -224,6 +239,9 @@ class IterationsPerSecond(Formatter):
 
 
 class SpinningWheel(Formatter):
+    """
+    Display a spinning wheel.
+    """
     characters = r'/-\|'
 
     def format(self, progress_bar, progress, width):
@@ -279,3 +297,23 @@ class Rainbow(Formatter):
 
     def get_width(self, progress_bar):
         return self.formatter.get_width(progress_bar)
+
+
+def create_default_formatters():
+    """
+    Return the list of default formatters.
+    """
+    return [
+        Label(),
+        Text(' '),
+        Percentage(),
+        Text(' '),
+        Bar(),
+        Text(' '),
+        Progress(),
+        Text(' '),
+        Text('eta [', style='class:time-left'),
+        TimeLeft(),
+        Text(']', style='class:time-left'),
+        Text(' '),
+    ]

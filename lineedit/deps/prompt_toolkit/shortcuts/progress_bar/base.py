@@ -3,7 +3,7 @@ Progress bar implementation on top of prompt_toolkit.
 
 ::
 
-    with progress_bar(...) as pb:
+    with ProgressBar(...) as pb:
         for item in pb(data):
             ...
 """
@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from prompt_toolkit.application import Application
 from prompt_toolkit.eventloop import get_event_loop
 from prompt_toolkit.filters import Condition, is_done, renderer_height_is_known
-from prompt_toolkit.formatted_text import to_formatted_text
+from prompt_toolkit.formatted_text import to_formatted_text, is_formatted_text
 from prompt_toolkit.input.defaults import get_default_input
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout, Window, ConditionalContainer, FormattedTextControl, HSplit, VSplit
@@ -26,16 +26,15 @@ import contextlib
 import datetime
 import os
 import signal
-import six
 import threading
 import time
 import traceback
 import sys
 
-from . import formatters as f
+from .formatters import create_default_formatters, Formatter
 
 __all__ = [
-    'progress_bar',
+    'ProgressBar',
 ]
 
 
@@ -58,51 +57,34 @@ def create_key_bindings():
     return kb
 
 
-def create_default_formatters():
-    return [
-        f.Label(),
-        f.Text(' '),
-        f.Percentage(),
-        f.Text(' '),
-        f.Bar(),
-        f.Text(' '),
-        f.Progress(),
-        f.Text(' '),
-        f.Text('eta [', style='class:time-left'),
-        f.TimeLeft(),
-        f.Text(']', style='class:time-left'),
-        f.Text(' '),
-    ]
-
-
-class progress_bar(object):
+class ProgressBar(object):
     """
     Progress bar context manager.
 
     Usage ::
 
-        with progress_bar(...) as pb:
+        with ProgressBar(...) as pb:
             for item in pb(data):
                 ...
 
     :param title: Text to be displayed above the progress bars. This can be a
         callable or formatted text as well.
-    :param formatters: List of `Formatter` instances.
-    :param bottom_toolbar: Text to be displayed in the bottom toolbar.
-        This can be a callable or formatted text.
-    :param style: `prompt_toolkit` ``Style`` instance.
-    :param key_bindings: `KeyBindings` instance.
+    :param formatters: List of :class:`.Formatter` instances.
+    :param bottom_toolbar: Text to be displayed in the bottom toolbar. This
+        can be a callable or formatted text.
+    :param style: :class:`prompt_toolkit.styles.BaseStyle` instance.
+    :param key_bindings: :class:`.KeyBindings` instance.
     :param file: The file object used for rendering, by default `sys.stderr` is used.
 
     :param color_depth: `prompt_toolkit` `ColorDepth` instance.
-    :param output: `prompt_toolkit` `Output` instance.
-    :param input: `prompt_toolkit` `Input` instance.
+    :param output: :class:`~prompt_toolkit.output.Output` instance.
+    :param input: :class:`~prompt_toolkit.input.Input` instance.
     """
     def __init__(self, title=None, formatters=None, bottom_toolbar=None,
                  style=None, key_bindings=None, file=None, color_depth=None,
                  output=None, input=None):
         assert formatters is None or (
-            isinstance(formatters, list) and all(isinstance(fo, f.Formatter) for fo in formatters))
+            isinstance(formatters, list) and all(isinstance(fo, Formatter) for fo in formatters))
         assert style is None or isinstance(style, BaseStyle)
         assert key_bindings is None or isinstance(key_bindings, KeyBindings)
 
@@ -145,7 +127,9 @@ class progress_bar(object):
             return formatter.get_width(progress_bar=self)
 
         progress_controls = [
-            Window(content=_ProgressControl(self, f), width=functools.partial(width_for_formatter, f))
+            Window(
+                content=_ProgressControl(self, f),
+                width=functools.partial(width_for_formatter, f))
             for f in self.formatters
         ]
 
@@ -171,7 +155,7 @@ class progress_bar(object):
             with _auto_refresh_context(self.app, .3):
                 try:
                     self.app.run()
-                except Exception as e:
+                except BaseException as e:
                     traceback.print_exc()
                     print(e)
 
@@ -202,12 +186,13 @@ class progress_bar(object):
         """
         Start a new counter.
 
-        :param label: Title text or description for this progress.
+        :param label: Title text or description for this progress. (This can be
+            formatted text as well).
         :param remove_when_done: When `True`, hide this progress bar.
         :param total: Specify the maximum value if it can't be calculated by
             calling ``len``.
         """
-        assert isinstance(label, six.text_type)
+        assert is_formatted_text(label)
         assert isinstance(remove_when_done, bool)
 
         counter = ProgressBarCounter(
@@ -306,7 +291,7 @@ class ProgressBarCounter(object):
         """
         Timedelta representing the time left.
         """
-        if self.total is None:
+        if self.total is None or not self.percentage:
             return None
         else:
             return self.time_elapsed * (100 - self.percentage) / self.percentage

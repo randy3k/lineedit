@@ -120,7 +120,7 @@ class ModalPromptSession(PromptSession):
             history=self.history,
             auto_suggest=DynamicAutoSuggest(lambda: self.auto_suggest),
             accept_handler=accept,
-            get_tempfile_suffix=lambda: self.tempfile_suffix)
+            tempfile_suffix=lambda: self.tempfile_suffix)
 
     def _create_application(self, *args, **kwargs):
         app = super(ModalPromptSession, self)._create_application(*args, **kwargs)

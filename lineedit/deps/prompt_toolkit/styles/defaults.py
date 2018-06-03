@@ -15,7 +15,7 @@ __all__ = [
 #: Default styling. Mapping from classnames to their style definition.
 PROMPT_TOOLKIT_STYLE = [
     # Highlighting of search matches in document.
-    ('search',                             'bg:ansibrightyellow'),
+    ('search',                             'bg:ansibrightyellow ansiblack'),
     ('search.current',                     ''),
 
     # Incremental search.
@@ -80,11 +80,14 @@ PROMPT_TOOLKIT_STYLE = [
     ('completion-menu.multi-column-meta',       'bg:#aaaaaa #000000'),
 
     # Scrollbars.
-    ('scrollbar.background',                     ''),
-    ('scrollbar.button',                         'bg:#888888'),
-    ('scrollbar.start',                          'underline #ffffff'),
-    ('scrollbar.end',                            'underline #000000'),
+    ('scrollbar.background',                     'bg:#aaaaaa'),
+    ('scrollbar.button',                         'bg:#444444'),
     ('scrollbar.arrow',                          'noinherit bold'),
+
+    # Start/end of scrollbars. Adding 'underline' here provides a nice little
+    # detail to the progress bar, but it doesn't look good on all terminals.
+    # ('scrollbar.start',                          'underline #ffffff'),
+    # ('scrollbar.end',                            'underline #000000'),
 
     # Auto suggestion text.
     ('auto-suggestion',                         '#666666'),
@@ -94,8 +97,8 @@ PROMPT_TOOLKIT_STYLE = [
     ('tab',                                     '#999999'),
 
     # When Control-C/D has been pressed. Grayed.
-    ('aborting',                                '#888888'),
-    ('exiting',                                 '#888888'),
+    ('aborting',  '#888888 bg:default noreverse noitalic nounderline noblink'),
+    ('exiting',   '#888888 bg:default noreverse noitalic nounderline noblink'),
 
     # Entering a Vi digraph.
     ('digraph',                                 '#4444ff'),

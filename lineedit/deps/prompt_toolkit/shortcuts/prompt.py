@@ -36,7 +36,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.enums import DEFAULT_BUFFER, SEARCH_BUFFER, EditingMode
 from prompt_toolkit.eventloop import ensure_future, Return, From
 from prompt_toolkit.filters import is_done, has_focus, renderer_height_is_known, to_filter, Condition, has_arg
-from prompt_toolkit.formatted_text import to_formatted_text
+from prompt_toolkit.formatted_text import to_formatted_text, merge_formatted_text
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input.defaults import get_default_input
 from prompt_toolkit.key_binding.bindings.auto_suggest import load_auto_suggest_bindings
@@ -45,7 +45,7 @@ from prompt_toolkit.key_binding.bindings.open_in_editor import load_open_in_edit
 from prompt_toolkit.key_binding.key_bindings import KeyBindings, DynamicKeyBindings, merge_key_bindings, ConditionalKeyBindings, KeyBindingsBase
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Window, HSplit, FloatContainer, Float
-from prompt_toolkit.layout.containers import ConditionalContainer, Align
+from prompt_toolkit.layout.containers import ConditionalContainer, WindowAlign
 from prompt_toolkit.layout.controls import BufferControl, SearchBufferControl, FormattedTextControl
 from prompt_toolkit.layout.dimension import Dimension
 from prompt_toolkit.layout.layout import Layout
@@ -114,7 +114,7 @@ class _RPrompt(Window):
     def __init__(self, get_formatted_text):
         super(_RPrompt, self).__init__(
             FormattedTextControl(get_formatted_text),
-            align=Align.RIGHT,
+            align=WindowAlign.RIGHT,
             style='class:rprompt')
 
 
@@ -169,8 +169,8 @@ class PromptSession(object):
         string matching.
     :param search_ignore_case:
         :class:`~prompt_toolkit.filters.Filter`. Search case insensitive.
-    :param lexer: :class:`~prompt_toolkit.layout.lexers.Lexer` to be used for
-        the syntax highlighting.
+    :param lexer: :class:`~prompt_toolkit.lexers.Lexer` to be used for the
+        syntax highlighting.
     :param validator: :class:`~prompt_toolkit.validation.Validator` instance
         for input validation.
     :param completer: :class:`~prompt_toolkit.completion.Completer` instance
@@ -202,6 +202,8 @@ class PromptSession(object):
     :param history: :class:`~prompt_toolkit.history.History` instance.
     :param clipboard: :class:`~prompt_toolkit.clipboard.Clipboard` instance.
         (e.g. :class:`~prompt_toolkit.clipboard.InMemoryClipboard`)
+    :param rprompt: Text or formatted text to be displayed on the right side.
+        This can also be a callable that returns (formatted) text.
     :param bottom_toolbar: Formatted text or callable which is supposed to
         return formatted text.
     :param prompt_continuation: Text that needs to be displayed for a multiline
@@ -352,7 +354,7 @@ class PromptSession(object):
             history=self.history,
             auto_suggest=DynamicAutoSuggest(lambda: self.auto_suggest),
             accept_handler=accept,
-            get_tempfile_suffix=lambda: self.tempfile_suffix)
+            tempfile_suffix=lambda: self.tempfile_suffix)
 
     def _create_search_buffer(self):
         return Buffer(name=SEARCH_BUFFER)
@@ -670,10 +672,14 @@ class PromptSession(object):
             tempfile_suffix=None, inputhook=None,
             async_=False):
         """
-        Display the prompt. All the arguments are the same as for the
-        :class:`~.PromptSession` class.
+        Display the prompt. All the arguments are a subset of the
+        :class:`~.PromptSession` class itself.
 
-        :param _async: When `True` return a `Future` instead of waiting for the
+        This will raise ``KeyboardInterrupt`` when control-c has been pressed
+        (for abort) and ``EOFError`` when control-d has been pressed (for
+        exit).
+
+        :param async_: When `True` return a `Future` instead of waiting for the
             prompt to finish.
         """
         # Backup original settings.
@@ -746,11 +752,20 @@ class PromptSession(object):
     def _get_prompt(self):
         return to_formatted_text(self.message, style='class:prompt')
 
-    def _get_continuation(self, width):
+    def _get_continuation(self, width, line_number, is_soft_wrap):
+        """
+        Insert the prompt continuation.
+
+        :param width: The width that's available for the continuation (don't
+            exceed this).
+        :param line_number:
+        :param is_soft_wrap: True when we got a soft wrap here instead of a
+            hard line ending.
+        """
         prompt_continuation = self.prompt_continuation
 
         if callable(prompt_continuation):
-            prompt_continuation = prompt_continuation(width)
+            prompt_continuation = prompt_continuation(width, line_number, is_soft_wrap)
 
         return to_formatted_text(
             prompt_continuation, style='class:prompt-continuation')
@@ -781,7 +796,7 @@ def prompt(*a, **kw):
 prompt.__doc__ = PromptSession.prompt.__doc__
 
 
-def create_confirm_session(message):
+def create_confirm_session(message, suffix=' (y/n) '):
     """
     Create a `PromptSession` object for the 'confirm' function.
     """
@@ -806,13 +821,14 @@ def create_confirm_session(message):
         " Disallow inserting other text. "
         pass
 
-    session = PromptSession(message, key_bindings=bindings)
+    complete_message = merge_formatted_text([message, suffix])
+    session = PromptSession(complete_message, key_bindings=bindings)
     return session
 
 
-def confirm(message='Confirm (y or n) '):
+def confirm(message='Confirm?', suffix=' (y/n) '):
     """
     Display a confirmation prompt that returns True/False.
     """
-    session = create_confirm_session(message)
+    session = create_confirm_session(message, suffix)
     return session.prompt()
