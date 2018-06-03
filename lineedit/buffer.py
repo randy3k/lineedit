@@ -195,13 +195,16 @@ class ModalBuffer(Buffer):
 
     def append_to_history(self):
         app = get_app()
-        if app.session.add_history:
-            mode = app.session.current_mode_name
-            if self.text and (
-                    not self.history.size() or
-                    self.history.last_string() != self.text or
-                    mode != self.history.last_mode()):
-                self.history.append_string(self.text, mode)
+        if not app.session.add_history:
+            return
+        if not app.session.current_mode.keep_history:
+            return
+        mode_name = app.session.current_mode_name
+        if self.text and (
+                not self.history.size() or
+                self.history.last_string() != self.text or
+                mode_name != self.history.last_mode()):
+            self.history.append_string(self.text, mode_name)
 
     def reset(self, document=None, append_to_history=False):
         self._is_searching = False

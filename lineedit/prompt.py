@@ -22,6 +22,7 @@ class Mode(object):
     def __init__(
             self,
             name,
+            keep_history=True,
             history_share=[],
             switchable_to=True,
             switchable_from=True,
@@ -29,6 +30,7 @@ class Mode(object):
             **kwargs):
 
         self.name = name
+        self.keep_history = keep_history
         if history_share:
             self.history_share = history_share
         else:
@@ -153,8 +155,11 @@ class ModalPromptSession(PromptSession):
     def main_mode(self):
         return next(iter(self.modes.values())) if len(self.modes) > 0 else None
 
-    def register_mode(self, mode):
-        assert isinstance(mode, Mode)
+    def register_mode(self, mode_or_name=None, **kwargs):
+        if isinstance(mode_or_name, Mode):
+            mode = mode_or_name
+        else:
+            mode = Mode(mode_or_name, **kwargs)
         self.modes[mode.name] = mode
         if len(self.modes) == 1:
             self.activate_mode(mode.name)
