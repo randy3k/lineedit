@@ -19,6 +19,9 @@ class Mode(object):
     def __init__(
             self,
             name,
+            on_activated=None,
+            on_pre_accept=None,
+            on_dectivated=None,
             keep_history=True,
             history_share_with=[],
             switchable_to=True,
@@ -28,6 +31,9 @@ class Mode(object):
             **kwargs):
 
         self.name = name
+        self.on_activated = on_activated
+        self.on_pre_accept = on_pre_accept
+        self.on_dectivated = on_dectivated
         self.keep_history = keep_history
         self.history_share_with = history_share_with
         self.switchable_to = switchable_to
@@ -48,7 +54,6 @@ class ModalPromptSession(PromptSession):
     _key_bindings = None
     _default_settings = {}
     modes = OrderedDict()
-    before_accept = None
 
     # new settings
     add_history = True
@@ -72,8 +77,7 @@ class ModalPromptSession(PromptSession):
     def _filter_args(self, kwargs):
         for key in (
                 "add_history",
-                "history_search_no_duplicates",
-                "before_accept"):
+                "history_search_no_duplicates"):
             if key in kwargs:
                 setattr(self, key, kwargs[key])
                 del kwargs[key]
@@ -86,8 +90,8 @@ class ModalPromptSession(PromptSession):
 
         # Create buffers list.
         def accept(buff):
-            if self.before_accept:
-                self.before_accept(buff)
+            if self.current_mode.on_pre_accept:
+                self.current_mode.on_pre_accept(self)
 
             # remember the last working index
             buff.last_working_index = buff.working_index
@@ -140,7 +144,7 @@ class ModalPromptSession(PromptSession):
         newmode = self.modes[name]
         if mode and (mode.switchable_from or force):
             if newmode and (newmode.switchable_to or force):
-                self.activate_mode(name)
+                self.activate_mode(name, force)
 
     @property
     def current_mode(self):
@@ -162,11 +166,19 @@ class ModalPromptSession(PromptSession):
     def unregister_mode(self, name):
         del self.modes[name]
 
-    def activate_mode(self, name):
+    def activate_mode(self, name, force=False):
         if name not in self.modes:
             return
 
         mode = self.modes[name]
+
+        if self.current_mode_name == mode.name and not force:
+            return
+
+        current_mode = self.current_mode
+        if current_mode and current_mode.on_dectivated:
+            current_mode.on_dectivated(self)
+
         self._current_mode = mode
 
         self._restore_settings()
@@ -181,6 +193,9 @@ class ModalPromptSession(PromptSession):
                 m.key_bindings for m in self.modes.values() if m.key_bindings
             ])
         ])
+
+        if mode.on_activated:
+            mode.on_activated(self)
 
     def _backup_settings(self):
         for name in self._fields:
@@ -208,6 +223,6 @@ class ModalPromptSession(PromptSession):
             self._default_settings = backup.copy()
 
         # prompt will restore settings, we need to reactivate current mode
-        self.activate_mode(self.current_mode_name)
+        self.activate_mode(self.current_mode_name, force=True)
 
         return result
