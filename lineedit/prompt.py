@@ -23,7 +23,7 @@ class Mode(object):
             self,
             name,
             keep_history=True,
-            history_share=[],
+            history_share_with=[],
             switchable_to=True,
             switchable_from=True,
             prompt_key_bindings=None,
@@ -31,10 +31,10 @@ class Mode(object):
 
         self.name = name
         self.keep_history = keep_history
-        if history_share:
-            self.history_share = history_share
+        if history_share_with:
+            self.history_share_with = history_share_with
         else:
-            self.history_share = [name]
+            self.history_share_with = [name]
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
         self.prompt_key_bindings = prompt_key_bindings

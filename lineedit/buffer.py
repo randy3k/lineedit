@@ -51,7 +51,7 @@ class ModalBuffer(Buffer):
         else:
             modes = self.history.get_modes()
             mode = app.session.current_mode
-            if modes[i] == mode.name or modes[i] in mode.history_share:
+            if modes[i] == mode.name or modes[i] in mode.history_share_with:
                 return True
         return False
 
