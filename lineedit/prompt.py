@@ -16,9 +16,6 @@ from .history import ModalHistory, ModalInMemoryHistory
 
 
 class Mode(object):
-    key_bindings = None
-    prompt_key_bindings = None
-
     def __init__(
             self,
             name,
@@ -26,21 +23,19 @@ class Mode(object):
             history_share_with=[],
             switchable_to=True,
             switchable_from=True,
+            key_bindings=None,
             prompt_key_bindings=None,
             **kwargs):
 
         self.name = name
         self.keep_history = keep_history
-        if history_share_with:
-            self.history_share_with = history_share_with
-        else:
-            self.history_share_with = [name]
+        self.history_share_with = history_share_with
         self.switchable_to = switchable_to
         self.switchable_from = switchable_from
         self.prompt_key_bindings = prompt_key_bindings
-        if "key_bindings" in kwargs:
-            self.key_bindings = kwargs["key_bindings"]
-        self.kwargs = kwargs
+        self.key_bindings = key_bindings
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
 
 def ensure_empty(kwargs, name):
@@ -177,8 +172,8 @@ class ModalPromptSession(PromptSession):
         self._restore_settings()
         for name in self._fields:
             if name is not "key_bindings":
-                if name in mode.kwargs:
-                    setattr(self, name, mode.kwargs[name])
+                if hasattr(mode, name):
+                    setattr(self, name, getattr(mode, name))
 
         self.key_bindings = merge_key_bindings([
             DynamicKeyBindings(lambda: self.current_mode.prompt_key_bindings),
