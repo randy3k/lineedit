@@ -223,11 +223,17 @@ class ModalPromptSession(PromptSession):
                 value = kwargs[name]
                 if value is not None:
                     setattr(self._default_settings, name, value)
+
+        orig_mode = self.current_mode_name
         try:
             result = super(ModalPromptSession, self).prompt(**kwargs)
+        except KeyboardInterrupt:
+            self._default_settings = backup.copy()
+            self.activate_mode(orig_mode, force=True)
+            raise KeyboardInterrupt
         finally:
             self._default_settings = backup.copy()
-            # prompt will restore settings, we need to reactivate current mode
-            self.activate_mode(self.current_mode_name, force=True)
 
+        # prompt will restore settings, we need to reactivate current mode
+        self.activate_mode(self.current_mode_name, force=True)
         return result
