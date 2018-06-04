@@ -65,6 +65,7 @@ class ModalPromptSession(PromptSession):
     _key_bindings = None
     _default_settings = {}
     modes = OrderedDict()
+    mode_class = Mode
 
     # new settings
     add_history = True
@@ -88,7 +89,8 @@ class ModalPromptSession(PromptSession):
     def _filter_args(self, kwargs):
         for key in (
                 "add_history",
-                "history_search_no_duplicates"):
+                "history_search_no_duplicates",
+                "mode_class"):
             if key in kwargs:
                 setattr(self, key, kwargs[key])
                 del kwargs[key]
@@ -156,10 +158,10 @@ class ModalPromptSession(PromptSession):
         return next(iter(self.modes.values())) if len(self.modes) > 0 else None
 
     def register_mode(self, mode_or_name=None, **kwargs):
-        if isinstance(mode_or_name, Mode):
+        if isinstance(mode_or_name, self.mode_class):
             mode = mode_or_name
         else:
-            mode = Mode(mode_or_name, **kwargs)
+            mode = self.mode_class(mode_or_name, **kwargs)
         self.modes[mode.name] = mode
         if len(self.modes) == 1:
             self.activate_mode(mode.name)
