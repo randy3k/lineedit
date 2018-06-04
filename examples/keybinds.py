@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 import sys
-from lineedit import Mode, ModalPromptSession
+from lineedit import ModalPromptSession
 from prompt_toolkit.key_binding.key_bindings import KeyBindings
 from prompt_toolkit.enums import DEFAULT_BUFFER
 from prompt_toolkit.filters import has_focus
@@ -37,9 +37,9 @@ def _(event):
     session.change_mode("r")
 
 
-session.register_mode(Mode("p", message=lambda: "p> ", prompt_key_bindings=pkb))
-session.register_mode(Mode("q", message=lambda: "q> ", prompt_key_bindings=qkb))
-session.register_mode(Mode("r", message=lambda: "r> ", key_bindings=kb, prompt_key_bindings=rkb))
+session.register_mode("p", message=lambda: "p> ", prompt_key_bindings=pkb)
+session.register_mode("q", message=lambda: "q> ", prompt_key_bindings=qkb)
+session.register_mode("r", message=lambda: "r> ", key_bindings=kb, prompt_key_bindings=rkb)
 
 
 print("Enter [p/q/r] to change mode:")

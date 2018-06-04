@@ -23,9 +23,9 @@ class Mode(object):
             on_pre_accept=None,
             on_dectivated=None,
             keep_history=True,
-            history_share_with=[],
-            switchable_to=True,
-            switchable_from=True,
+            history_share_with=lambda m: False,
+            switchable_to=lambda m: True,
+            switchable_from=lambda m: True,
             key_bindings=None,
             prompt_key_bindings=None,
             **kwargs):
@@ -136,16 +136,6 @@ class ModalPromptSession(PromptSession):
         else:
             return None
 
-    def change_mode(self, name, force=False):
-        if name not in self.modes:
-            raise Exception("no such mode")
-
-        mode = self._current_mode
-        newmode = self.modes[name]
-        if mode and (mode.switchable_from or force):
-            if newmode and (newmode.switchable_to or force):
-                self.activate_mode(name, force)
-
     @property
     def current_mode(self):
         return self._current_mode
@@ -166,9 +156,25 @@ class ModalPromptSession(PromptSession):
     def unregister_mode(self, name):
         del self.modes[name]
 
+    def change_mode(self, name, force=False):
+        if name not in self.modes:
+            raise Exception("no such mode")
+
+        mode = self._current_mode
+        newmode = self.modes[name]
+        if not mode or not newmode:
+            return
+
+        if mode.name == newmode.name and not force:
+            return
+
+        if not mode.switchable_to or mode.switchable_to(newmode.name):
+            if not newmode.switchable_from or newmode.switchable_from(mode.name):
+                self.activate_mode(name, force)
+
     def activate_mode(self, name, force=False):
         if name not in self.modes:
-            return
+            raise Exception("no such mode")
 
         mode = self.modes[name]
 

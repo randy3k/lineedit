@@ -1,10 +1,16 @@
 from __future__ import unicode_literals
 import sys
-from lineedit import Mode, ModalPromptSession
+from lineedit import ModalPromptSession
 
 session = ModalPromptSession()
-session.register_mode(Mode("p", message=lambda: "p> ", history_share_with=["q"]))
-session.register_mode(Mode("q", message=lambda: "q> ", history_share_with=["p"]))
+session.register_mode(
+    "p",
+    message=lambda: "p> ",
+    history_share_with=lambda m: m in ["q"])
+session.register_mode(
+    "q",
+    message=lambda: "q> ",
+    history_share_with=lambda m: m in ["p"])
 
 
 print("Enter [p/q] to change mode:")

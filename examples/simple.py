@@ -3,8 +3,8 @@ import sys
 from lineedit import Mode, ModalPromptSession
 
 session = ModalPromptSession()
-session.register_mode(Mode("p", message=lambda: "p> "))
-session.register_mode(Mode("q", message=lambda: "q> "))
+session.register_mode("p", message=lambda: "p> ")
+session.register_mode("q", message=lambda: "q> ")
 
 
 print("Enter [p/q] to change mode:")
