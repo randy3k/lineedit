@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 from collections import OrderedDict
+from six import text_type
 
 from prompt_toolkit.auto_suggest import DynamicAutoSuggest
 from prompt_toolkit.completion import DynamicCompleter, ThreadedCompleter
@@ -23,21 +24,31 @@ class Mode(object):
             on_pre_accept=None,
             on_dectivated=None,
             keep_history=True,
-            history_share_with=lambda m: False,
-            switchable_to=lambda m: True,
-            switchable_from=lambda m: True,
+            history_share_with=False,
+            switchable_to=True,
+            switchable_from=True,
             key_bindings=None,
             prompt_key_bindings=None,
             **kwargs):
+
+        def _ensure_func(x):
+            if isinstance(x, bool):
+                return lambda m: x
+            elif isinstance(x, list):
+                return lambda m: m in x
+            elif isinstance(x, text_type):
+                return lambda m: m == x
+            else:
+                return x
 
         self.name = name
         self.on_activated = on_activated
         self.on_pre_accept = on_pre_accept
         self.on_dectivated = on_dectivated
         self.keep_history = keep_history
-        self.history_share_with = history_share_with
-        self.switchable_to = switchable_to
-        self.switchable_from = switchable_from
+        self.history_share_with = _ensure_func(history_share_with)
+        self.switchable_to = _ensure_func(switchable_to)
+        self.switchable_from = _ensure_func(switchable_from)
         self.prompt_key_bindings = prompt_key_bindings
         self.key_bindings = key_bindings
         for key in kwargs:
