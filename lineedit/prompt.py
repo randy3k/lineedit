@@ -152,6 +152,8 @@ class ModalPromptSession(PromptSession):
         self.modes[mode.name] = mode
         if len(self.modes) == 1:
             self.activate_mode(mode.name)
+        else:
+            self.activate_mode(self.current_mode_name, force=True)
 
     def unregister_mode(self, name):
         del self.modes[name]
