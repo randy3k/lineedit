@@ -161,7 +161,7 @@ class ModalPromptSession(PromptSession):
         if isinstance(mode_or_name, self.mode_class):
             mode = mode_or_name
         else:
-            mode = self.mode_class(mode_or_name, **kwargs)
+            mode = self.mode_class(text_type(mode_or_name), **kwargs)
         self.modes[mode.name] = mode
         if len(self.modes) == 1:
             self.activate_mode(mode.name)
