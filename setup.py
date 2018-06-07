@@ -35,9 +35,6 @@ setup(
         'six',
         'wcwidth'
     ],
-    setup_requires=[
-        "pytest-runner"
-    ],
     extras_require={
         "test": [
             "pytest",
