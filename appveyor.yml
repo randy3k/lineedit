@@ -16,7 +16,6 @@ init:
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "%CMD_IN_ENV%  python -m pip install --upgrade setuptools pip"
-  - "%CMD_IN_ENV%  pip install flaky"
-  - "%CMD_IN_ENV%  python setup.py pytest"
+  - "%CMD_IN_ENV%  pip install -e .[test]"
 test_script:
-  - "%CMD_IN_ENV%  "
+  - "%CMD_IN_ENV%  pytest"

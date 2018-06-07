@@ -6,13 +6,17 @@ jobs:
       - image: circleci/python:2.7-jessie
     steps:
       - checkout
-      - run: python setup.py pytest
+      - run: |
+          sudo pip install -e .[test]
+          pytest
   test-py35:
     docker:
       - image: circleci/python:3.5-jessie-node
     steps:
       - checkout
-      - run: python setup.py pytest
+      - run: |
+          sudo pip install -e .[test]
+          pytest
   deploy-to-pypi:
     docker:
       - image: circleci/python

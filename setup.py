@@ -38,10 +38,12 @@ setup(
     setup_requires=[
         "pytest-runner"
     ],
-    tests_require=[
-        "pytest",
-        "pyte",
-        "pexpect",
-        "pywinpty" if sys.platform.startswith("win") else "ptyprocess"
-    ]
+    extras_require={
+        "test": [
+            "pytest",
+            "pyte",
+            "pexpect",
+            "pywinpty" if sys.platform.startswith("win") else "ptyprocess"
+        ]
+    }
 )
