@@ -2,7 +2,7 @@ build: false
 
 environment:
   matrix:
-   - PYTHON: "C:\\C:\Python27-x64"
+   - PYTHON: "C:\\Python27-x64"
      PYTHON_VERSION: "2.7.x"
      PYTHON_ARCH: "64"
 
