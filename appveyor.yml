@@ -1,0 +1,24 @@
+build: false
+matrix:
+  fast_finish: true     # immediately finish build once one of the jobs fails.
+
+environment:
+  matrix:
+   - PYTHON: "C:\\C:\Python27-x64"
+     PYTHON_VERSION: "2.7.x"
+     PYTHON_ARCH: "64"
+
+   - PYTHON: "C:\\Python36-x64"
+     PYTHON_VERSION: "3.6.x"
+     PYTHON_ARCH: "64"
+
+init:
+  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
+
+install:
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - "%CMD_IN_ENV%  python -m pip install --upgrade setuptools pip"
+  - "%CMD_IN_ENV%  pip install flaky"
+  - "%CMD_IN_ENV%  python setup.py pytest"
+test_script:
+  - "%CMD_IN_ENV%  "
