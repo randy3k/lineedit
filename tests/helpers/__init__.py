@@ -17,7 +17,7 @@ def assert_equal(x, y, timeout=5):
     g = y if callable(y) else lambda: y
     while not f() == g():
         if time.time() - t > timeout:
-            raise Exception("'{}' not equal to '{}'".format(x, y))
+            raise Exception("'{}' not equal to '{}'".format(f(), g()))
         time.sleep(0.01)
 
 
@@ -28,7 +28,7 @@ def assert_startswith(x, y, timeout=5):
     while not f().startswith(g()):
         if time.time() - t > timeout:
             raise Exception(
-                "expect '{}', but got '{}'".format(content, self.display[lineno]))
+                "expect '{}', but got '{}'".format(f(), g()))
         time.sleep(0.01)
 
 
@@ -36,6 +36,7 @@ if sys.platform.startswith("win"):
     ParentPtyProcess = winpty.PtyProcess
 else:
     ParentPtyProcess = ptyprocess.PtyProcess
+
 
 class PtyProcess(ParentPtyProcess):
 
