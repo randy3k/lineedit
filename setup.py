@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 from setuptools import setup, find_packages
 
@@ -40,6 +41,7 @@ setup(
     tests_require=[
         "pytest",
         "pyte",
-        "pexpect"
+        "pexpect",
+        "pywinpty" if sys.platform.startswith("win") else "ptyprocess"
     ]
 )
