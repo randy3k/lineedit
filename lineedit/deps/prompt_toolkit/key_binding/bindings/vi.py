@@ -84,6 +84,9 @@ class TextObject(object):
         Return a (start, end) tuple with start <= end that indicates the range
         operators should operate on.
         `buffer` is used to get start and end of line positions.
+
+        This should return something that can be used in a slice, so the `end`
+        position is *not* included.
         """
         start, end = self.sorted()
         doc = document
@@ -126,7 +129,13 @@ class TextObject(object):
 
         from_ += buffer.cursor_position
         to += buffer.cursor_position
-        to -= 1  # SelectionState does not include the end position, `operator_range` does.
+
+        # For Vi mode, the SelectionState does include the upper position,
+        # while `self.operator_range` does not. So, go one to the left, unless
+        # we're in the line mode, then we don't want to risk going to the
+        # previous line, and missing one line in the selection.
+        if self.type != TextObjectType.LINEWISE:
+            to -= 1
 
         document = Document(buffer.text, to, SelectionState(
             original_cursor_position=from_, type=self.selection_type))
@@ -749,13 +758,19 @@ def load_vi_bindings():
         """
         Delete character.
         """
-        text = event.current_buffer.delete(count=event.arg)
-        event.app.clipboard.set_text(text)
+        buff = event.current_buffer
+        count = min(event.arg, len(buff.document.current_line_after_cursor))
+        if count:
+            text = event.current_buffer.delete(count=count)
+            event.app.clipboard.set_text(text)
 
     @handle('X', filter=vi_navigation_mode)
     def _(event):
-        text = event.current_buffer.delete_before_cursor()
-        event.app.clipboard.set_text(text)
+        buff = event.current_buffer
+        count = min(event.arg, len(buff.document.current_line_before_cursor))
+        if count:
+            text = event.current_buffer.delete_before_cursor(count=count)
+            event.app.clipboard.set_text(text)
 
     @handle('y', 'y', filter=vi_navigation_mode)
     @handle('Y', filter=vi_navigation_mode)
@@ -1767,6 +1782,7 @@ def load_vi_search_bindings():
     handle('c-s', filter=is_searching)(search.forward_incremental_search)
 
     handle('c-c')(search.abort_search)
+    handle('c-g')(search.abort_search)
     handle('backspace', filter=search_buffer_is_empty)(search.abort_search)
 
     # Handle escape. This should accept the search, just like readline.
