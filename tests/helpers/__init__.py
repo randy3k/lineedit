@@ -28,7 +28,7 @@ def assert_startswith(x, y, timeout=5):
     while not f().startswith(g()):
         if time.time() - t > timeout:
             raise Exception(
-                "expect '{}', but got '{}'".format(f(), g()))
+                "expect '{}', but got '{}'".format(g(), f().strip()))
         time.sleep(0.01)
 
 
