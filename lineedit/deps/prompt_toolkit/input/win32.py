@@ -4,13 +4,14 @@ from ctypes.wintypes import DWORD
 from six.moves import range
 from contextlib import contextmanager
 
+from .ansi_escape_sequences import REVERSE_ANSI_SEQUENCES
+from .base import Input
 from prompt_toolkit.eventloop import get_event_loop
 from prompt_toolkit.eventloop.win32 import wait_for_handles
 from prompt_toolkit.key_binding.key_processor import KeyPress
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.mouse_events import MouseEventType
 from prompt_toolkit.win32_types import EventTypes, KEY_EVENT_RECORD, MOUSE_EVENT_RECORD, INPUT_RECORD, STD_INPUT_HANDLE
-from .base import Input
 
 import msvcrt
 import os
@@ -21,7 +22,9 @@ __all__ = [
     'Win32Input',
     'ConsoleInputReader',
     'raw_mode',
-    'cooked_mode'
+    'cooked_mode',
+    'attach_win32_input',
+    'detach_win32_input',
 ]
 
 
@@ -38,14 +41,14 @@ class Win32Input(Input):
         event loop.
         """
         assert callable(input_ready_callback)
-        return _attach_win32_input(self, input_ready_callback)
+        return attach_win32_input(self, input_ready_callback)
 
     def detach(self):
         """
         Return a context manager that makes sure that this input is not active
         in the current event loop.
         """
-        return _detach_win32_input(self)
+        return detach_win32_input(self)
 
     def read_keys(self):
         return list(self.console_input_reader.read())
@@ -209,6 +212,9 @@ class ConsoleInputReader(object):
         # whether we should consider this a paste event or not.
         all_keys = list(self._get_keys(read, input_records))
 
+        # Fill in 'data' for key presses.
+        all_keys = [self._insert_key_data(key) for key in all_keys]
+
         if self.recognize_paste and self._is_paste(all_keys):
             gen = iter(all_keys)
             for k in gen:
@@ -230,6 +236,16 @@ class ConsoleInputReader(object):
         else:
             for k in all_keys:
                 yield k
+
+    def _insert_key_data(self, key_press):
+        """
+        Insert KeyPress data, for vt100 compatibility.
+        """
+        if key_press.data:
+            return key_press
+
+        data = REVERSE_ANSI_SEQUENCES.get(key_press.key, '')
+        return KeyPress(key_press.key, data)
 
     def _get_keys(self, read, input_records):
         """
@@ -381,7 +397,7 @@ _current_callbacks = {}  # loop -> callback
 
 
 @contextmanager
-def _attach_win32_input(input, callback):
+def attach_win32_input(input, callback):
     """
     Context manager that makes this input active in the current event loop.
 
@@ -389,6 +405,7 @@ def _attach_win32_input(input, callback):
     :param input_ready_callback: Called when the input is ready to read.
     """
     assert isinstance(input, Input)
+    assert callable(callback)
 
     loop = get_event_loop()
     previous_callback = _current_callbacks.get(loop)
@@ -410,7 +427,9 @@ def _attach_win32_input(input, callback):
 
 
 @contextmanager
-def _detach_win32_input(input):
+def detach_win32_input(input):
+    assert isinstance(input, Input)
+
     loop = get_event_loop()
     previous = _current_callbacks.get(loop)
 

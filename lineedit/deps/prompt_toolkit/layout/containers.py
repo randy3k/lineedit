@@ -39,6 +39,7 @@ __all__ = [
     'to_container',
     'to_window',
     'is_container',
+    'DynamicContainer',
 ]
 
 
@@ -1625,10 +1626,15 @@ class Window(Container):
                             # probably part of a decomposed unicode character.
                             # See: https://en.wikipedia.org/wiki/Unicode_equivalence
                             # Merge it in the previous cell.
-                            elif char_width == 0 and x - 1 >= 0:
-                                prev_char = new_buffer_row[x + xpos - 1]
-                                char2 = _CHAR_CACHE[prev_char.char + c, prev_char.style]
-                                new_buffer_row[x + xpos - 1] = char2
+                            elif char_width == 0:
+                                # Handle all character widths. If the previous
+                                # character is a multiwidth character, then
+                                # merge it two positions back.
+                                for pw in [2, 1]:  # Previous character width.
+                                    if x - pw >= 0 and new_buffer_row[x + xpos - pw].width == pw:
+                                        prev_char = new_buffer_row[x + xpos - pw]
+                                        char2 = _CHAR_CACHE[prev_char.char + c, prev_char.style]
+                                        new_buffer_row[x + xpos - pw] = char2
 
                             # Keep track of write position for each character.
                             rowcol_to_yx[lineno, col] = (y + ypos, x + xpos)
@@ -2070,6 +2076,49 @@ class ConditionalContainer(Container):
 
     def get_children(self):
         return [self.content]
+
+
+class DynamicContainer(Container):
+    """
+    Container class that can dynamically returns any Container.
+
+    :param get_container: Callable that returns a :class:`.Container` instance
+        or any widget with a ``__pt_container__`` method.
+    """
+    def __init__(self, get_container):
+        assert callable(get_container)
+        self.get_container = get_container
+
+    def _get_container(self):
+        """
+        Return the current container object.
+
+        We call `to_container`, because `get_container` can also return a
+        widget with a ``__pt_container__`` method.
+        """
+        obj = self.get_container()
+        return to_container(obj)
+
+    def reset(self):
+        self._get_container().reset()
+
+    def preferred_width(self, max_available_width):
+        return self._get_container().preferred_width(max_available_width)
+
+    def preferred_height(self, width, max_available_height):
+        return self._get_container().preferred_height(width, max_available_height)
+
+    def write_to_screen(self, *a, **kw):
+        self._get_container().write_to_screen(*a, **kw)
+
+    def is_modal(self):
+        return self._get_container().is_modal()
+
+    def get_key_bindings(self):
+        self._get_container().get_key_bindings()
+
+    def get_children(self):
+        return self._get_container().get_children()
 
 
 def to_container(container):

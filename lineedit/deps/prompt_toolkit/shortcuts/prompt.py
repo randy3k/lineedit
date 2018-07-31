@@ -34,7 +34,7 @@ from prompt_toolkit.clipboard import DynamicClipboard, InMemoryClipboard
 from prompt_toolkit.completion import DynamicCompleter, ThreadedCompleter
 from prompt_toolkit.document import Document
 from prompt_toolkit.enums import DEFAULT_BUFFER, SEARCH_BUFFER, EditingMode
-from prompt_toolkit.eventloop import ensure_future, Return, From
+from prompt_toolkit.eventloop import ensure_future, Return, From, get_event_loop
 from prompt_toolkit.filters import is_done, has_focus, renderer_height_is_known, to_filter, Condition, has_arg
 from prompt_toolkit.formatted_text import to_formatted_text, merge_formatted_text
 from prompt_toolkit.history import InMemoryHistory
@@ -208,7 +208,8 @@ class PromptSession(object):
         return formatted text.
     :param prompt_continuation: Text that needs to be displayed for a multiline
         prompt continuation. This can either be formatted text or a callable
-        that the width as input and returns formatted text.
+        that takes a `width`, `line_number` and `is_soft_wrap` as input and
+        returns formatted text.
     :param complete_style: ``CompleteStyle.COLUMN``,
         ``CompleteStyle.MULTI_COLUMN`` or ``CompleteStyle.READLINE_LIKE``.
     :param mouse_support: `bool` or :class:`~prompt_toolkit.filters.Filter`
@@ -331,9 +332,6 @@ class PromptSession(object):
             """ Accept the content of the default buffer. This is called when
             the validation succeeds. """
             self.app.exit(result=buff.document.text)
-
-            # Reset content before running again.
-            self.app.pre_run_callables.append(buff.reset)
 
         return Buffer(
             name=DEFAULT_BUFFER,
@@ -670,7 +668,7 @@ class PromptSession(object):
             reserve_space_for_menu=None, enable_system_prompt=None,
             enable_suspend=None, enable_open_in_editor=None,
             tempfile_suffix=None, inputhook=None,
-            async_=False):
+            async_=False, accept_default=False):
         """
         Display the prompt. All the arguments are a subset of the
         :class:`~.PromptSession` class itself.
@@ -681,6 +679,8 @@ class PromptSession(object):
 
         :param async_: When `True` return a `Future` instead of waiting for the
             prompt to finish.
+        :param accept_default: When `True`, automatically accept the default
+            value without allowing the user to edit the input.
         """
         # Backup original settings.
         backup = dict((name, getattr(self, name)) for name in self._fields)
@@ -699,11 +699,20 @@ class PromptSession(object):
             for name in self._fields:
                 setattr(self, name, backup[name])
 
+        def pre_run():
+            if accept_default:
+                # Validate and handle input. We use `call_from_executor` in
+                # order to run it "soon" (during the next iteration of the
+                # event loop), instead of right now. Otherwise, it won't
+                # display the default value.
+                get_event_loop().call_from_executor(
+                    self.default_buffer.validate_and_handle)
+
         def run_sync():
             with self._auto_refresh_context():
                 try:
                     self.default_buffer.reset(Document(self.default))
-                    return self.app.run(inputhook=self.inputhook)
+                    return self.app.run(inputhook=self.inputhook, pre_run=pre_run)
                 finally:
                     restore()
 
@@ -711,7 +720,7 @@ class PromptSession(object):
             with self._auto_refresh_context():
                 try:
                     self.default_buffer.reset(Document(self.default))
-                    result = yield From(self.app.run_async())
+                    result = yield From(self.app.run_async(pre_run=pre_run))
                     raise Return(result)
                 finally:
                     restore()
@@ -788,8 +797,9 @@ def prompt(*a, **kw):
     # class, not its method.
     input = kw.pop('input', None)
     output = kw.pop('output', None)
+    history = kw.pop('history', None)
 
-    session = PromptSession(input=input, output=output)
+    session = PromptSession(input=input, output=output, history=history)
     return session.prompt(*a, **kw)
 
 

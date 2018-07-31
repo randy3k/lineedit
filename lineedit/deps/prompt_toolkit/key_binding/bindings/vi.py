@@ -456,6 +456,13 @@ def load_vi_bindings():
     handle('enter', filter=is_returnable & ~is_multiline)(
         get_by_name('accept-line'))
 
+    @handle('enter', filter=~is_returnable & vi_navigation_mode)
+    def _(event):
+        " Go to the beginning of next line. "
+        b = event.current_buffer
+        b.cursor_down(count=event.arg)
+        b.cursor_position += b.document.get_start_of_line_position(after_whitespace=True)
+
     # ** In navigation mode **
 
     # List of navigation commands: http://hea-www.harvard.edu/~fine/Tech/vi.html
@@ -1646,6 +1653,50 @@ def load_vi_bindings():
             buff.multiple_cursor_positions = new_cursor_positions
         else:
             event.app.output.bell()
+
+    @handle('left', filter=vi_insert_multiple_mode)
+    def _(event):
+        """
+        Move all cursors to the left.
+        (But keep all cursors on the same line.)
+        """
+        buff = event.current_buffer
+        new_positions = []
+
+        for p in buff.multiple_cursor_positions:
+            if buff.document.translate_index_to_position(p)[1] > 0:
+                p -= 1
+            new_positions.append(p)
+
+        buff.multiple_cursor_positions = new_positions
+
+        if buff.document.cursor_position_col > 0:
+            buff.cursor_position -= 1
+
+    @handle('right', filter=vi_insert_multiple_mode)
+    def _(event):
+        """
+        Move all cursors to the right.
+        (But keep all cursors on the same line.)
+        """
+        buff = event.current_buffer
+        new_positions = []
+
+        for p in buff.multiple_cursor_positions:
+            row, column = buff.document.translate_index_to_position(p)
+            if column < len(buff.document.lines[row]):
+                p += 1
+            new_positions.append(p)
+
+        buff.multiple_cursor_positions = new_positions
+
+        if not buff.document.is_cursor_at_the_end_of_line:
+            buff.cursor_position += 1
+
+    @handle('up', filter=vi_insert_multiple_mode)
+    @handle('down', filter=vi_insert_multiple_mode)
+    def _(event):
+        " Ignore all up/down key presses when in multiple cursor mode. "
 
     @handle('c-x', 'c-l', filter=vi_insert_mode)
     def _(event):
