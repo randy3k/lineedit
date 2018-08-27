@@ -32,7 +32,7 @@ setup(
     packages=find_packages('.'),
     install_requires=[
         'pygments',
-        'six',
+        'six>=1.9.0',
         'wcwidth'
     ],
     extras_require={
