@@ -7,3 +7,6 @@ class LineEdit:
 
     def prompt(self):
         pass
+
+    def run(self):
+        pass
