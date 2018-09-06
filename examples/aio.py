@@ -1,10 +1,14 @@
-import lineedit.posix_stream
 from lineedit.key import Key
 import sys
 import time
 import asyncio
 
-stream = lineedit.posix_stream.PosixStream(sys.stdin)
+if sys.platform.startswith("win"):
+    import lineedit.win32_stream
+    stream = lineedit.win32_stream.Win32Stream(sys.stdin)
+else:
+    import lineedit.posix_stream
+    stream = lineedit.posix_stream.PosixStream(sys.stdin)
 
 
 @asyncio.coroutine

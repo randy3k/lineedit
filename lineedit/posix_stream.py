@@ -54,7 +54,7 @@ class PosixStream:
     def raw_mode(self):
         return raw_mode(self.stdin.fileno())
 
-    def cook_mode(self):
+    def cooked_mode(self):
         return cooked_mode(self.stdin.fileno())
 
     def _parser_fsm(self):
