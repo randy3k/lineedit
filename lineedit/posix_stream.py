@@ -73,7 +73,7 @@ class PosixStream:
 
             key = get_posix_key(prefix)
             if key:
-                self.key_buffer.append(key)
+                self._append_key(key)
                 prefix = ""
                 continue
 
@@ -81,7 +81,7 @@ class PosixStream:
             for i in range(len(prefix), 0, -1):
                 key = get_posix_key(prefix[:i])
                 if key:
-                    self.key_buffer.append(key)
+                    self._append_key(key)
                     found = i
                     break
 
@@ -91,10 +91,17 @@ class PosixStream:
                     retry = True
                 continue
 
-            self.key_buffer.append(prefix[0])
+            self._append_key(prefix[0])
             prefix = prefix[1:]
             if prefix:
                 retry = True
+
+    def _append_key(self, key):
+        if type(key) is tuple:
+            for k in key:
+                self.key_buffer.append(k)
+        else:
+            self.key_buffer.append(key)
 
 
 class raw_mode(object):

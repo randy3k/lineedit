@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 # derived from prompt_toolkit
 
 from ctypes import windll, pointer
@@ -41,19 +43,17 @@ class Win32Stream:
         if not self.wait_until_ready(0):
             return
 
-        return list(self._read_input())
+        return list(self._read_events())
 
-    def _read_input(self):
-        max_count = 2048
-
-        read = DWORD(0)
-        arrtype = INPUT_RECORD * max_count
-        input_records = arrtype()
+    def _read_events(self):
+        n = 2048
+        nevents = DWORD(0)
+        input_record = (INPUT_RECORD * n)()
         windll.kernel32.ReadConsoleInputW(
-            self.handle, pointer(input_records), max_count, pointer(read))
+            self.handle, pointer(input_record), n, pointer(nevents))
 
-        for i in range(read.value):
-            ir = input_records[i]
+        for i in range(nevents.value):
+            ir = input_record[i]
             if ir.EventType in EventTypes:
                 ev = getattr(ir.Event, EventTypes[ir.EventType])
                 if type(ev) == KEY_EVENT_RECORD and ev.KeyDown:
@@ -65,13 +65,13 @@ class Win32Stream:
         result = None
 
         u_char = ev.uChar.UnicodeChar
-
         if u_char == '\x00':
             if ev.VirtualKeyCode in WIN32_KEYCODE:
                 result = WIN32_KEYCODE[ev.VirtualKeyCode]
         elif u_char in ANSI_SEQUENCES:
-            if ANSI_SEQUENCES[u_char] == Key.ControlJ:
-                u_char = '\n'  # Windows sends \n, turn into \r for unix compatibility.
+            # make windows 'Enter' vt100 compatiable
+            if u_char == "\n" and ev.VirtualKeyCode == 13:
+                u_char = "\r"
             result = ANSI_SEQUENCES[u_char]
         else:
             result = u_char
@@ -91,29 +91,41 @@ class Win32Stream:
             elif result == Key.Down:
                 result = Key.ControlDown
 
-        # Turn 'Tab' into 'BackTab' when shift was pressed.
-        if ev.ControlKeyState & SHIFT_PRESSED and result == Key.Tab:
-                result = Key.BackTab
+        # Correctly handle Shift-Arrow keys.
+        elif ev.ControlKeyState & SHIFT_PRESSED and result:
+            if result == Key.Left:
+                result = Key.ShiftLeft
 
-        # Turn 'Space' into 'ControlSpace' when control was pressed.
+            elif result == Key.Right:
+                result = Key.ShiftRight
+
+            elif result == Key.Up:
+                result = Key.ShiftUp
+
+            elif result == Key.Down:
+                result = Key.ShiftDown
+
+        if result == Key.Delete:
+            if ev.ControlKeyState & SHIFT_PRESSED:
+                result = Key.ShiftDelete
+            elif ev.ControlKeyState & LEFT_CTRL_PRESSED or ev.ControlKeyState & RIGHT_CTRL_PRESSED:
+                result = Key.ControlDelete
+
+        # Turn 'Tab' into 'BackTab' when shift was pressed.
+        if result == Key.ControlI and ev.ControlKeyState & SHIFT_PRESSED:
+            result = Key.BackTab
+
+        # Turn 'Space' into 'ControlAt' when control was pressed.
         if (ev.ControlKeyState & LEFT_CTRL_PRESSED or
                 ev.ControlKeyState & RIGHT_CTRL_PRESSED) and result == ' ':
-            result = Key.ControlSpace
-
-        # Turn Control-Enter into META-Enter. (On a vt100 terminal, we cannot
-        # detect this combination. But it's really practical on Windows.)
-        if (ev.ControlKeyState & LEFT_CTRL_PRESSED or
-                ev.ControlKeyState & RIGHT_CTRL_PRESSED) and result == Key.ControlJ:
-            result = (Key.Escape, Key.ControlJ)
+            result = Key.ControlAt
 
         if result:
-            meta_pressed = ev.ControlKeyState & LEFT_ALT_PRESSED
-
-            if meta_pressed:
-                return [(Key.Escape, result)]
+            # Correctly handle Meta key.
+            if ev.ControlKeyState & LEFT_ALT_PRESSED:
+                return [Key.Escape, result]
             else:
                 return [result]
-
         else:
             return []
 

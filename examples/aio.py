@@ -24,11 +24,12 @@ def run_async():
     while True:
         if stream.wait_until_ready(timeout=0):
             data = stream.read()
-            print(data)
             if data and data[0] == Key.ControlD:
                 return
-        else:
-            yield from input_hook()
+            if data:
+                print(data)
+                continue
+        yield from input_hook()
 
 
 loop = asyncio.get_event_loop()

@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+from __future__ import unicode_literals
 from ctypes import Union, Structure, c_char, c_short, c_long, c_ulong
 from ctypes.wintypes import DWORD, BOOL, LPVOID, WORD, WCHAR
 
