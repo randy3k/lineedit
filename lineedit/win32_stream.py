@@ -7,7 +7,7 @@ from ctypes.wintypes import DWORD, BOOL, HANDLE
 
 from .win32_types import SECURITY_ATTRIBUTES, STD_INPUT_HANDLE, INPUT_RECORD, \
     KEY_EVENT_RECORD, EventTypes
-from .key import Key, ANSI_SEQUENCES, WIN32_KEYCODE
+from .key import Key, KeyEvent, ANSI_SEQUENCES, WIN32_KEYCODE
 
 WAIT_TIMEOUT = 0x00000102
 INFINITE = -1
@@ -58,7 +58,7 @@ class Win32Stream:
                 ev = getattr(ir.Event, EventTypes[ir.EventType])
                 if type(ev) == KEY_EVENT_RECORD and ev.KeyDown:
                     for key in self._event_to_key(ev):
-                        yield key
+                        yield KeyEvent(key)
 
     def _event_to_key(self, ev):
 

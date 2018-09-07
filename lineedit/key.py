@@ -297,3 +297,16 @@ def get_posix_key(s):
         return POSIX_SEQUENCES[s]
     except KeyError:
         return None
+
+
+class KeyEvent:
+
+    def __init__(self, key, data=None):
+        self.key = key
+        self.data = data
+
+    def __repr__(self):
+        if isinstance(self.key, Key):
+            return self.key.value
+        else:
+            return self.key
