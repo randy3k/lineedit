@@ -7,7 +7,7 @@ from ctypes import windll, pointer
 from ctypes.wintypes import DWORD, BOOL, HANDLE
 
 from .win32_types import STD_INPUT_HANDLE, INPUT_RECORD, KEY_EVENT_RECORD, EventTypes
-from .key import Key, KeyEvent, ANSI_SEQUENCES, REVERSED_POSIX_SEQUENCES, WIN32_KEYCODE
+from .key import Key, KeyEvent, CTRL_SEQUENCES, WIN32_KEYCODE, get_ansi_sequence
 from .vt100_parser import Vt100Parser
 
 WAIT_TIMEOUT = 0x00000102
@@ -65,7 +65,7 @@ class Win32Stream:
                         if isinstance(key, text_type):
                             yield key
                         else:
-                            yield REVERSED_POSIX_SEQUENCES[key]
+                            yield get_ansi_sequence(key)
 
     def _event_to_key(self, ev):
 
@@ -75,11 +75,11 @@ class Win32Stream:
         if u_char == '\x00':
             if ev.VirtualKeyCode in WIN32_KEYCODE:
                 result = WIN32_KEYCODE[ev.VirtualKeyCode]
-        elif u_char in ANSI_SEQUENCES:
+        elif u_char in CTRL_SEQUENCES:
             # make windows 'Enter' vt100 compatiable
             if u_char == "\n" and ev.VirtualKeyCode == 13:
                 u_char = "\r"
-            result = ANSI_SEQUENCES[u_char]
+            result = CTRL_SEQUENCES[u_char]
         else:
             result = u_char
 

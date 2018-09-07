@@ -18,7 +18,7 @@ class Key(Enum):
     PageDown = 'pagedown'
     Insert = 'insert'
 
-    ControlAt = 'c-@'
+    ControlAt = 'c-@'  # c-space
     ControlA = 'c-a'
     ControlB = 'c-b'
     ControlC = 'c-c'
@@ -99,7 +99,7 @@ class Key(Enum):
     Ignore = '<ignore>'
 
 
-ANSI_SEQUENCES = {
+CTRL_SEQUENCES = {
     '\x00': Key.ControlAt,
     '\x01': Key.ControlA,
     '\x02': Key.ControlB,
@@ -137,8 +137,8 @@ ANSI_SEQUENCES = {
 }
 
 
-POSIX_SEQUENCES = ANSI_SEQUENCES.copy()
-POSIX_SEQUENCES.update({
+ANSI_SEQUENCES = CTRL_SEQUENCES.copy()
+ANSI_SEQUENCES.update({
     '\x1b[A': Key.Up,
     '\x1b[B': Key.Down,
     '\x1b[C': Key.Right,
@@ -243,7 +243,7 @@ POSIX_SEQUENCES.update({
     '\x1b[G': Key.Ignore
 })
 
-REVERSED_POSIX_SEQUENCES = {v: k for k, v in POSIX_SEQUENCES.items()}
+REVERSED_ANSI_SEQUENCES = {v: k for k, v in ANSI_SEQUENCES.items()}
 
 
 WIN32_KEYCODE = {
@@ -277,28 +277,36 @@ WIN32_KEYCODE = {
 }
 
 
-class IS_POSIX_SEQUENCES_PREFIX(dict):
+class IS_ANSI_SEQUENCES_PREFIX(dict):
     """
     Use a dict to cache prefix result
     """
     def __missing__(self, prefix):
-        is_prefix = any(v for k, v in POSIX_SEQUENCES.items() if k.startswith(prefix) and k != prefix)
+        is_prefix = any(
+            v for k, v in ANSI_SEQUENCES.items() if k.startswith(prefix) and k != prefix)
         self[prefix] = is_prefix
         return is_prefix
 
 
-_is_posix_sequences_prefix = IS_POSIX_SEQUENCES_PREFIX()
+_is_ansi_sequences_prefix = IS_ANSI_SEQUENCES_PREFIX()
 
 
-def is_posix_prefix(s):
-    return _is_posix_sequences_prefix[s]
+def is_ansi_prefix(s):
+    return _is_ansi_sequences_prefix[s]
 
 
-def get_posix_key(s):
+def get_ansi_key(s):
     try:
-        return POSIX_SEQUENCES[s]
+        return ANSI_SEQUENCES[s]
     except KeyError:
         return None
+
+
+def get_ansi_sequence(s):
+    try:
+        return REVERSED_ANSI_SEQUENCES[s]
+    except KeyError:
+        return ""
 
 
 class KeyEvent:

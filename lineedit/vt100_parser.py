@@ -1,4 +1,4 @@
-from .key import Key, is_posix_prefix, get_posix_key
+from .key import Key, is_ansi_prefix, get_ansi_key
 
 
 class Vt100Parser:
@@ -42,11 +42,11 @@ class Vt100Parser:
                 char = yield
                 prefix += char
 
-            is_prefix = is_posix_prefix(prefix)
+            is_prefix = is_ansi_prefix(prefix)
             if is_prefix:
                 continue
 
-            key = get_posix_key(prefix)
+            key = get_ansi_key(prefix)
             if key:
                 if key is Key.BracketedPaste:
                     self._paste_mode = True
@@ -59,7 +59,7 @@ class Vt100Parser:
 
             found = -1
             for i in range(len(prefix), 0, -1):
-                key = get_posix_key(prefix[:i])
+                key = get_ansi_key(prefix[:i])
                 if key:
                     self._callback(key)
                     found = i
