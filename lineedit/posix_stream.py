@@ -7,9 +7,8 @@ import tty
 import termios
 
 from codecs import getincrementaldecoder
-
-
-from .key import Key, KeyEvent, is_posix_prefix, get_posix_key
+from .key import KeyEvent
+from .vt100_parser import Vt100Parser
 
 
 class PosixReader:
@@ -37,10 +36,7 @@ class PosixStream:
 
     def __init__(self, stdin):
         self.stdin = PosixReader(stdin)
-        self._paste_mode = False
-        self._paste_data = ""
-        self._parser = self._parser_fsm()
-        self._parser.send(None)
+        self._parser = Vt100Parser(callback=self._append_key_event)
 
     def wait_until_ready(self, timeout=None):
         rlist = [self.stdin.fileno()]
@@ -49,75 +45,8 @@ class PosixStream:
     def read(self):
         data = self.stdin.read()
         self._key_events = []
-        self._feed(data)
+        self._parser.feed(data)
         return self._key_events
-
-    def _feed(self, data):
-        if self._paste_mode:
-            self._feed_bpm(data)
-        else:
-            for i, c in enumerate(data):
-                if self._paste_mode:
-                    self._feed_bpm(data[i:])
-                    break
-                else:
-                    self._parser.send(c)
-
-    def _feed_bpm(self, data):
-        end_mark = '\x1b[201~'
-        if end_mark in data:
-            end_index = data.index(end_mark)
-            self._paste_data += data[:end_index]
-            self._append_key_event(Key.BracketedPaste, self._paste_data)
-            self._paste_data = ""
-            self._feed(data[end_index + len(end_mark):])
-            self._paste_mode = False
-        else:
-            self._paste_data += data
-
-    def _parser_fsm(self):
-        prefix = ""
-        retry = False
-        while True:
-            if retry:
-                retry = False
-            else:
-                char = yield
-                prefix += char
-
-            is_prefix = is_posix_prefix(prefix)
-            if is_prefix:
-                continue
-
-            key = get_posix_key(prefix)
-            if key:
-                if key is Key.BracketedPaste:
-                    self._paste_mode = True
-                    prefix = ""
-                    continue
-                else:
-                    self._append_key_event(key)
-                    prefix = ""
-                    continue
-
-            found = -1
-            for i in range(len(prefix), 0, -1):
-                key = get_posix_key(prefix[:i])
-                if key:
-                    self._append_key_event(key)
-                    found = i
-                    break
-
-            if found >= 0:
-                prefix = prefix[found:]
-                if prefix:
-                    retry = True
-                continue
-
-            self._append_key_event(prefix[0])
-            prefix = prefix[1:]
-            if prefix:
-                retry = True
 
     def _append_key_event(self, key, data=None):
         if type(key) is tuple:

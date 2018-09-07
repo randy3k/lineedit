@@ -9,11 +9,9 @@ if sys.platform.startswith("win"):
 else:
     import lineedit.posix_stream
     stream = lineedit.posix_stream.PosixStream(sys.stdin)
-
-
-# enable bracketed paste mode
-sys.stdout.write('\x1b[?2004h')
-sys.stdout.flush()
+    # enable bracketed paste mode
+    sys.stdout.write('\x1b[?2004h')
+    sys.stdout.flush()
 
 
 @asyncio.coroutine

@@ -1,13 +1,14 @@
 from __future__ import unicode_literals
 
-# derived from prompt_toolkit
+# disclaimer: much of the following is derived from prompt_toolkit
 
+from six import text_type
 from ctypes import windll, pointer
 from ctypes.wintypes import DWORD, BOOL, HANDLE
 
-from .win32_types import SECURITY_ATTRIBUTES, STD_INPUT_HANDLE, INPUT_RECORD, \
-    KEY_EVENT_RECORD, EventTypes
-from .key import Key, KeyEvent, ANSI_SEQUENCES, WIN32_KEYCODE
+from .win32_types import STD_INPUT_HANDLE, INPUT_RECORD, KEY_EVENT_RECORD, EventTypes
+from .key import Key, KeyEvent, ANSI_SEQUENCES, REVERSED_POSIX_SEQUENCES, WIN32_KEYCODE
+from .vt100_parser import Vt100Parser
 
 WAIT_TIMEOUT = 0x00000102
 INFINITE = -1
@@ -22,6 +23,7 @@ RIGHT_CTRL_PRESSED = 0x0004
 class Win32Stream:
     def __init__(self, stdin=None):
         self.handle = windll.kernel32.GetStdHandle(STD_INPUT_HANDLE)
+        self._parser = Vt100Parser(callback=self._append_key_event)
 
     def wait_until_ready(self, timeout=None):
         if timeout is None:
@@ -42,10 +44,12 @@ class Win32Stream:
     def read(self):
         if not self.wait_until_ready(0):
             return
+        self._key_events = []
+        data = "".join(self._read_data())
+        self._parser.feed(data)
+        return self._key_events
 
-        return list(self._read_events())
-
-    def _read_events(self):
+    def _read_data(self):
         n = 2048
         nevents = DWORD(0)
         input_record = (INPUT_RECORD * n)()
@@ -58,7 +62,10 @@ class Win32Stream:
                 ev = getattr(ir.Event, EventTypes[ir.EventType])
                 if type(ev) == KEY_EVENT_RECORD and ev.KeyDown:
                     for key in self._event_to_key(ev):
-                        yield KeyEvent(key)
+                        if isinstance(key, text_type):
+                            yield key
+                        else:
+                            yield REVERSED_POSIX_SEQUENCES[key]
 
     def _event_to_key(self, ev):
 
@@ -129,25 +136,18 @@ class Win32Stream:
         else:
             return []
 
+    def _append_key_event(self, key, data=None):
+        if type(key) is tuple:
+            for k in key:
+                self._key_events.append(KeyEvent(k, data))
+        else:
+            self._key_events.append(KeyEvent(key, data))
+
     def raw_mode(self):
         return raw_mode()
 
     def cooked_mode(self):
         return cooked_mode()
-
-
-def create_win32_event():
-    """
-    Creates a Win32 unnamed Event .
-
-    http://msdn.microsoft.com/en-us/library/windows/desktop/ms682396(v=vs.85).aspx
-    """
-    return windll.kernel32.CreateEventA(
-        pointer(SECURITY_ATTRIBUTES()),
-        BOOL(True),  # Manual reset event.
-        BOOL(False),  # Initial state.
-        None  # Unnamed event object.
-    )
 
 
 class raw_mode(object):

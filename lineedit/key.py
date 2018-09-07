@@ -243,6 +243,8 @@ POSIX_SEQUENCES.update({
     '\x1b[G': Key.Ignore
 })
 
+REVERSED_POSIX_SEQUENCES = {v: k for k, v in POSIX_SEQUENCES.items()}
+
 
 WIN32_KEYCODE = {
     33: Key.PageUp,
