@@ -7,7 +7,7 @@ from ctypes import windll, pointer
 from ctypes.wintypes import DWORD, BOOL, HANDLE
 
 from .win32_types import STD_INPUT_HANDLE, INPUT_RECORD, KEY_EVENT_RECORD, EventTypes
-from .key import Key, KeyEvent, CTRL_SEQUENCES, WIN32_KEYCODE, get_ansi_sequence
+from .key import Key, KeyPress, CTRL_SEQUENCES, WIN32_KEYCODE, get_ansi_sequence
 from .vt100_parser import Vt100Parser
 
 WAIT_TIMEOUT = 0x00000102
@@ -44,10 +44,10 @@ class Win32Stream:
     def read(self):
         if not self.wait_until_ready(0):
             return
-        self._key_events = []
+        self._key_presses = []
         data = "".join(self._read_data())
         self._parser.feed(data)
-        return self._key_events
+        return self._key_presses
 
     def _read_data(self):
         n = 2048
@@ -139,9 +139,9 @@ class Win32Stream:
     def _append_key_event(self, key, data=None):
         if type(key) is tuple:
             for k in key:
-                self._key_events.append(KeyEvent(k, data))
+                self._key_presses.append(KeyPress(k, data))
         else:
-            self._key_events.append(KeyEvent(key, data))
+            self._key_presses.append(KeyPress(key, data))
 
     def raw_mode(self):
         return raw_mode()

@@ -1,7 +1,11 @@
-from lineedit.key import Key
 import sys
 import time
 import asyncio
+
+from lineedit.key_bindings import KeyBindings
+from lineedit.key_processor import KeyProcessor
+from lineedit.readline import get_command
+
 
 if sys.platform.startswith("win"):
     import lineedit.win32_stream
@@ -12,6 +16,13 @@ else:
     # enable bracketed paste mode
     sys.stdout.write('\x1b[?2004h')
     sys.stdout.flush()
+
+
+bind = KeyBindings()
+processor = KeyProcessor(bind)
+
+bind.add('c-a')(get_command('beginning-of-line'))
+bind.add('c-e')(get_command('end-of-line'))
 
 
 @asyncio.coroutine
@@ -27,11 +38,7 @@ def run_async():
     while True:
         if stream.wait_until_ready(timeout=0):
             data = stream.read()
-            if data and data[0].key == Key.ControlD:
-                return
-            if data:
-                print(data)
-                continue
+            processor.feed(data)
         yield from input_hook()
 
 

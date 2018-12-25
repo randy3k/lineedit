@@ -7,7 +7,7 @@ import tty
 import termios
 
 from codecs import getincrementaldecoder
-from .key import KeyEvent
+from .key import KeyPress
 from .vt100_parser import Vt100Parser
 
 
@@ -44,16 +44,16 @@ class PosixStream:
 
     def read(self):
         data = self.stdin.read()
-        self._key_events = []
+        self._key_presses = []
         self._parser.feed(data)
-        return self._key_events
+        return self._key_presses
 
     def _append_key_event(self, key, data=None):
         if type(key) is tuple:
             for k in key:
-                self._key_events.append(KeyEvent(k, data))
+                self._key_presses.append(KeyPress(k, data))
         else:
-            self._key_events.append(KeyEvent(key, data))
+            self._key_presses.append(KeyPress(key, data))
 
     def raw_mode(self):
         return raw_mode(self.stdin.fileno())

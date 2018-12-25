@@ -309,7 +309,7 @@ def get_ansi_sequence(s):
         return ""
 
 
-class KeyEvent:
+class KeyPress:
 
     def __init__(self, key, data=None):
         self.key = key
