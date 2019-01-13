@@ -5,6 +5,8 @@ import asyncio
 from lineedit.key_bindings import KeyBindings
 from lineedit.key_processor import KeyProcessor
 from lineedit.readline import get_command
+from lineedit.buffer import Buffer
+from lineedit.current import changing_buffer
 
 
 if sys.platform.startswith("win"):
@@ -20,6 +22,7 @@ else:
 
 bind = KeyBindings()
 processor = KeyProcessor(bind)
+buf = Buffer()
 
 bind.add('c-a')(get_command('beginning-of-line'))
 bind.add('c-e')(get_command('end-of-line'))
@@ -43,5 +46,5 @@ def run_async():
 
 
 loop = asyncio.get_event_loop()
-with stream.raw_mode():
+with changing_buffer(buf), stream.raw_mode():
     loop.run_until_complete(run_async())

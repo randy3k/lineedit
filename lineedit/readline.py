@@ -11,8 +11,8 @@ def get_command(name):
 
 
 def beginning_of_line(event):
-    event.buffer.move_cursor_to_bol()
+    event.buffer.document.move_cursor_to_bol()
 
 
 def end_of_line(event):
-    event.buffer.move_cursor_to_eol()
+    event.buffer.document.move_cursor_to_eol()

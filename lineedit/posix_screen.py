@@ -1,6 +1,17 @@
 import errno
 
 
+def _get_size(fileno):
+    # Thanks to fabric (fabfile.org), and
+    # http://sqizit.bartletts.id.au/2011/02/14/pseudo-terminals-in-python/
+    import fcntl
+    import termios
+
+    buf = array.array(b'h' if six.PY2 else u'h', [0, 0, 0, 0])
+    fcntl.ioctl(fileno, termios.TIOCGWINSZ, buf)
+
+    return buf[0], buf[1]
+
 class PosixScreen:
 
     def __init__(self, stdout, term="linux"):
@@ -9,12 +20,20 @@ class PosixScreen:
         self.term = term
 
     def fileno(self):
-        " Return file descriptor. "
+        """
+        Return file descriptor.
+        """
         return self.stdout.fileno()
 
     def encoding(self):
-        " Return encoding used for stdout. "
+        """
+        Return encoding used for stdout.
+        """
         return self.stdout.encoding
+
+    def get_size(self):
+        return _get_size(self.fileno())
+
 
     def write_raw(self, data):
         """
