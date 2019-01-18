@@ -3,35 +3,25 @@ from .current import current_buffer
 
 class KeyPressEvent:
     def __init__(self, key_presses):
+        if not isinstance(key_presses, list):
+            key_presses = [key_presses]
         self.key_presses = key_presses
-        self._buffer = current_buffer()
+        self.buffer = current_buffer()
 
     @property
     def keys(self):
-        return [kp.key for kp in self.key_presses]
+        return tuple(kp.key for kp in self.key_presses)
 
     @property
     def data(self):
         return [kp.data for kp in self.key_presses]
 
-    @property
-    def buffer(self):
-        return self._buffer
-
-
-def default_handler(event):
-    for key in event.keys:
-        event.buffer.insert_text(key)
-
 
 class KeyProcessor:
-    def __init__(self, bind):
-        self.bind = bind
+    def __init__(self, bindings):
+        self.bindings = bindings
         self._process = self._process_fsm()
         self._process.send(None)
-
-    def call_handler(self, handler, key_presses):
-        handler(KeyPressEvent(key_presses))
 
     def feed(self, data):
         if isinstance(data, list):
@@ -41,20 +31,53 @@ class KeyProcessor:
             self._process.send(data)
 
     def _process_fsm(self):
-        # FIXME: handle prefix keys
         prefix = []
+        retry = False
         while True:
-            key_press = yield
-            prefix.append(key_press)
+            if retry:
+                retry = False
+            else:
+                key_press = yield
+                prefix.append(key_press)
 
-            key = key_press.key
-            if isinstance(key, str) and ord(key) < 128:
-                # ascii
-                self.call_handler(default_handler, [key_press])
+            keys = tuple(kp.key for kp in prefix)
+            if self.bindings.any_prefix(keys):
+                continue
 
-            elif self.bind.exact_match(key):
-                self.call_handler(self.bind.get(key), [key_press])
+            matches = self.bindings.get_matches(keys)
+            if matches:
+                match = matches[-1]
+                match.dispatch(KeyPressEvent(prefix))
+                # flush prefix
                 prefix = []
+                continue
 
-            # flush prefix
-            prefix = []
+            found = -1
+            for i in range(len(prefix), 0, -1):
+                prefix_keys = tuple(kp.key for kp in prefix[:i])
+                matches = self.bindings.get_matches(prefix_keys)
+                if matches:
+                    match = matches[-1]
+                    match.dispatch(KeyPressEvent(prefix))
+                    found = i
+
+            if found >= 0:
+                prefix = prefix[found:]
+                if prefix:
+                    retry = True
+                continue
+
+            matches = self.bindings.get_matches(keys[0])
+            bind = None
+            if matches:
+                bind = matches[-1]
+            else:
+                matches = self.bindings.get_matches('<any>')
+                if matches:
+                    bind = matches[-1]
+            if bind:
+                bind.dispatch(KeyPressEvent(prefix[0]))
+
+            prefix = prefix[1:]
+            if prefix:
+                retry = True

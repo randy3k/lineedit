@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 from enum import Enum
+from functools import lru_cache
 
 
 class Key(Enum):
@@ -97,6 +98,8 @@ class Key(Enum):
     BracketedPaste = '<bracketed-paste>'
 
     Ignore = '<ignore>'
+
+    Any = '<any>'
 
 
 CTRL_SEQUENCES = {
@@ -277,22 +280,10 @@ WIN32_KEYCODE = {
 }
 
 
-class IS_ANSI_SEQUENCES_PREFIX(dict):
-    """
-    Use a dict to cache prefix result
-    """
-    def __missing__(self, prefix):
-        is_prefix = any(
-            v for k, v in ANSI_SEQUENCES.items() if k.startswith(prefix) and k != prefix)
-        self[prefix] = is_prefix
-        return is_prefix
-
-
-_is_ansi_sequences_prefix = IS_ANSI_SEQUENCES_PREFIX()
-
-
-def is_ansi_prefix(s):
-    return _is_ansi_sequences_prefix[s]
+@lru_cache(maxsize=None)
+def is_ansi_prefix(prefix):
+    return any(
+        v for k, v in ANSI_SEQUENCES.items() if k.startswith(prefix) and k != prefix)
 
 
 def get_ansi_key(s):

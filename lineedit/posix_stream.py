@@ -15,6 +15,7 @@ class PosixReader:
     """
     Make reading stdin non blocking
     """
+
     def __init__(self, stdin):
         self.fd = stdin.fileno()
         # make sure decoding is continuous
@@ -66,6 +67,7 @@ class raw_mode(object):
     """
     clone from prompt_toolkit
     """
+
     def __init__(self, fileno):
         self.fileno = fileno
         try:

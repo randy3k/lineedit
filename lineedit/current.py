@@ -4,11 +4,11 @@ from contextlib import contextmanager
 buffer_stack = []
 
 
-def register_buffer(buf):
+def focus_buffer(buf):
     buffer_stack.append(buf)
 
 
-def deregister_buffer(buf):
+def unfocus_buffer(buf):
     buffer_stack.pop()
 
 
@@ -17,9 +17,9 @@ def current_buffer():
 
 
 @contextmanager
-def changing_buffer(buf):
-    register_buffer(buf)
+def focusing_buffer(buf):
+    focus_buffer(buf)
     try:
         yield
     finally:
-        deregister_buffer(buf)
+        unfocus_buffer(buf)
