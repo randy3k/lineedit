@@ -105,5 +105,10 @@ def default_bindings():
     bindings.add((Key.Escape, Key.Escape))(noop)
     bindings.add((Key.Escape, 'b'))(get_command('backward-word'))
     bindings.add((Key.Escape, 'f'))(get_command('forward-word'))
+
+    @bindings.add((Key.Escape, 'c-m'))
+    def _(event):
+        event.buffer.insert_text('\n')
+
     bindings.add('<any>')(get_command('self-insert'))
     return bindings

@@ -7,7 +7,6 @@ from .current import focusing_buffer
 from .layout import Layout
 from .key_bindings import default_bindings
 from .key_processor import KeyProcessor
-from .screen import Screen
 from .utils import is_windows
 
 from .renderer import Renderer

@@ -1,6 +1,4 @@
 from .utils import is_windows
-from .sgr import select_graphic_rendition
-
 
 import errno
 import array
@@ -57,18 +55,10 @@ class PosixConsole:
     def erase_down(self):
         self.write_raw('\x1b[J')
 
-    def reset_attributes(self):
-        self.write_raw('\x1b[0m')
-
-    def set_attributes(self, attrs):
-        code = select_graphic_rendition(attrs)
-        if code:
-            self.write_raw(code)
-
     def disable_autowrap(self):
         self.write_raw('\x1b[?7l')
 
-    def p(self):
+    def enable_autowrap(self):
         self.write_raw('\x1b[?7h')
 
     def enable_bracketed_paste(self):
