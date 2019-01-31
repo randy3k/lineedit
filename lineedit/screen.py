@@ -1,4 +1,4 @@
-from .char import chars_to_text
+from .char import text_to_chars, chars_to_text
 
 
 class Screen:
@@ -9,7 +9,7 @@ class Screen:
         self.wrapped = []
 
     def feed(self, chars):
-        for c in chars:
+        for c in text_to_chars(chars):
             if c.data == "\n":
                 self.cursor = (self.cursor[0] + 1, 0)
             elif self.cursor[1] == self.screen_width:
