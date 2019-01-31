@@ -35,6 +35,7 @@ class Prompt:
     def run(self):
 
         self.console.enable_bracketed_paste()
+        self.console.enable_autowrap()
         self.console.flush()
         self.renderer.render()
 
