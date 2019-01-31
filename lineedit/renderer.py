@@ -12,9 +12,15 @@ class Renderer:
         self.layout.write_to_screen(screen)
 
         self.console.hide_cursor()
-        self.console.cursor_up(self._cursor[0])
         self.console.cursor_horizontal_absolute(0)
-        self.console.erase_down()
+        if self._cursor[0] >= 1:
+            # we don't apply erase_down directly to avoid screen being pushed to history
+            # in some terminals
+            self.console.cursor_up(self._cursor[0] - 1)
+            self.console.erase_down()
+            self.console.cursor_up(1)
+        self.console.erase_end_of_line()
+
         data = screen.cast()
         self.console.write_raw(data)
 
