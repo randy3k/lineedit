@@ -99,6 +99,15 @@ def noop(event):
 
 def default_bindings():
     bindings = KeyBindings()
+
+    @bindings.add('left')
+    def _(event):
+        event.buffer.document.move_cursor_to_left()
+
+    @bindings.add('right')
+    def _(event):
+        event.buffer.document.move_cursor_to_right()
+
     bindings.add('c-a')(get_command('beginning-of-line'))
     bindings.add('c-e')(get_command('end-of-line'))
     bindings.add('c-d')(get_command('end-of-file'))

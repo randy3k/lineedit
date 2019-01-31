@@ -73,6 +73,15 @@ class Document:
         r, c = self.rowcol
         self.rowcol = (r, -1)
 
+    def move_cursor_to_left(self, amount=1):
+        if self.cursor - amount < 0:
+            self.cursor = 0
+        else:
+            self.cursor = self.cursor - amount
+
+    def move_cursor_to_right(self, amount=1):
+        self.cursor = self.cursor + amount
+
 
 class Buffer:
     def __init__(self):

@@ -12,7 +12,7 @@ class Renderer:
         self.layout.write_to_screen(screen)
 
         self.console.hide_cursor()
-        self.console.cursor_horizontal_absolute(0)
+        self.console.cursor_horizontal_absolute(1)
         if self._cursor[0] >= 1:
             # we don't apply erase_down directly to avoid screen being pushed to history
             # in some terminals
@@ -26,16 +26,18 @@ class Renderer:
 
         screen_cursor = screen.cursor
         current_cursor = screen.get_wrapped_coordinates(self.layout.cursor)
+
         diff_y = screen_cursor[0] - current_cursor[0]
         if diff_y > 0:
             self.console.cursor_up(diff_y)
         else:
-            self.console.cursor_down(diff_y)
+            self.console.cursor_down(-diff_y)
+
         diff_x = screen_cursor[1] - current_cursor[1]
         if diff_x > 0:
             self.console.cursor_backward(diff_x)
         else:
-            self.console.cursor_forward(diff_x)
+            self.console.cursor_forward(-diff_x)
 
         self._cursor = current_cursor
 
