@@ -108,6 +108,15 @@ def default_bindings():
     def _(event):
         event.buffer.document.move_cursor_to_right()
 
+    @bindings.add('up')
+    def _(event):
+        event.buffer.auto_up()
+
+    @bindings.add('down')
+    def _(event):
+        event.buffer.auto_down()
+
+
     bindings.add('c-a')(get_command('beginning-of-line'))
     bindings.add('c-e')(get_command('end-of-line'))
     bindings.add('c-d')(get_command('end-of-file'))

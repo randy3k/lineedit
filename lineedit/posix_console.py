@@ -1,6 +1,5 @@
 from .utils import is_windows
 
-import errno
 import array
 
 if not is_windows():
@@ -115,32 +114,9 @@ class PosixConsole:
         if not self._buffer:
             return
 
-        data = ''.join(self._buffer)
-
-        try:
-            if hasattr(self.stdout, 'buffer'):
-                out = self.stdout.buffer
-            else:
-                out = self.stdout
-            out.write(data.encode(self.stdout.encoding or 'utf-8', 'replace'))
-
-            self.stdout.flush()
-        except IOError as e:
-            if e.args and e.args[0] == errno.EINTR:
-                # Interrupted system call. Can happen in case of a window
-                # resize signal. (Just ignore. The resize handler will render
-                # again anyway.)
-                pass
-            elif e.args and e.args[0] == 0:
-                # This can happen when there is a lot of output and the user
-                # sends a KeyboardInterrupt by pressing Control-C. E.g. in
-                # a Python REPL when we execute "while True: print('test')".
-                # (The `ptpython` REPL uses this `Output` class instead of
-                # `stdout` directly -- in order to be network transparent.)
-                # So, just ignore.
-                pass
-            else:
-                raise
+        data = ''.join(self._buffer).encode(self.stdout.encoding or 'utf-8', 'replace')
+        self.stdout.buffer.write(data)
+        self.stdout.flush()
 
         self._buffer = []
 

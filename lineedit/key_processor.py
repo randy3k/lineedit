@@ -1,4 +1,4 @@
-from .current import current_buffer
+from .current import current_prompt
 
 
 class KeyPressEvent:
@@ -6,7 +6,7 @@ class KeyPressEvent:
         if not isinstance(key_presses, list):
             key_presses = [key_presses]
         self.key_presses = key_presses
-        self.buffer = current_buffer()
+        self.buffer = current_prompt().buffer
 
     @property
     def keys(self):

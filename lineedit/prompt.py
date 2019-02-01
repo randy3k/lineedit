@@ -1,9 +1,9 @@
-import sys
-import time
 import asyncio
+import signal
+import sys
 
 from .buffer import Buffer
-from .current import focusing_buffer
+from .current import prompt_change
 from .layout import Layout
 from .key_bindings import default_bindings
 from .key_processor import KeyProcessor
@@ -33,28 +33,31 @@ class Prompt:
         self.renderer = Renderer(self.layout, self.console)
 
     def run(self):
-
         self.console.enable_bracketed_paste()
         self.console.enable_autowrap()
         self.console.flush()
         self.renderer.render()
 
-        @asyncio.coroutine
-        def input_hook():
+        loop = asyncio.get_event_loop()
+
+        def on_resize():
+            self.renderer.render()
+
+        async def input_hook():
             while True:
                 if self.stream.wait_until_ready(timeout=0):
                     return
-                time.sleep(0.03)
+                await asyncio.sleep(0.03)
 
-        @asyncio.coroutine
-        def run_async():
+        async def run_async():
             while True:
                 if self.stream.wait_until_ready(timeout=0):
                     data = self.stream.read()
                     self.processor.feed(data)
                     self.renderer.render()
-                yield from input_hook()
+                await input_hook()
 
-        loop = asyncio.get_event_loop()
-        with focusing_buffer(self.buffer), self.stream.raw_mode():
+        with prompt_change(self), self.stream.raw_mode():
+            old_sigwinch_handler = loop.add_signal_handler(signal.SIGWINCH, on_resize)
             loop.run_until_complete(run_async())
+            loop.add_signal_handler(signal.SIGWINCH, old_sigwinch_handler)

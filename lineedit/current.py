@@ -1,25 +1,25 @@
 from contextlib import contextmanager
 
 
-buffer_stack = []
+prompt_stack = []
 
 
-def focus_buffer(buf):
-    buffer_stack.append(buf)
+def add_prompt(prompt):
+    prompt_stack.append(prompt)
 
 
-def unfocus_buffer(buf):
-    buffer_stack.pop()
+def remove_app(prompt):
+    prompt_stack.pop()
 
 
-def current_buffer():
-    return buffer_stack[-1]
+def current_prompt():
+    return prompt_stack[-1]
 
 
 @contextmanager
-def focusing_buffer(buf):
-    focus_buffer(buf)
+def app_change(prompt):
+    add_prompt(prompt)
     try:
         yield
     finally:
-        unfocus_buffer(buf)
+        remove_app(prompt)

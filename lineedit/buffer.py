@@ -50,6 +50,8 @@ class Document:
         row = self.text.count('\n')
         if r > row:
             r, c = self.rowcol
+        elif r < 0:
+            r = 0
 
         if row == 0:
             self.cursor = c
@@ -82,6 +84,15 @@ class Document:
     def move_cursor_to_right(self, amount=1):
         self.cursor = self.cursor + amount
 
+    def move_cursor_up(self, amount=1):
+        # TODO: remember column position for consecutive up
+        r, c = self.rowcol
+        self.rowcol = (r - amount, c)
+
+    def move_cursor_down(self, amount=1):
+        r, c = self.rowcol
+        self.rowcol = (r + amount, c)
+
 
 class Buffer:
     def __init__(self):
@@ -93,3 +104,9 @@ class Buffer:
     @property
     def text(self):
         return self.document.text
+
+    def auto_up(self):
+        self.document.move_cursor_up()
+
+    def auto_down(self):
+        self.document.move_cursor_down()
