@@ -6,7 +6,8 @@ class KeyPressEvent:
         if not isinstance(key_presses, list):
             key_presses = [key_presses]
         self.key_presses = key_presses
-        self.buffer = current_prompt().buffer
+        self.prompt = current_prompt()
+        self.buffer = self.prompt.buffer
 
     @property
     def keys(self):

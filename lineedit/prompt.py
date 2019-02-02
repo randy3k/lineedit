@@ -19,6 +19,7 @@ else:
 
 class Prompt:
     def __init__(self, message=''):
+        self._value = None
         self.buffer = Buffer()
         self.bindings = default_bindings()
         self.processor = KeyProcessor(self.bindings)
@@ -55,6 +56,10 @@ class Prompt:
                     data = self.stream.read()
                     self.processor.feed(data)
                     self.renderer.render()
+                if self.value is not None:
+                    self.console.write("\n")
+                    self.console.flush()
+                    break
                 await input_hook()
 
         try:
@@ -63,3 +68,11 @@ class Prompt:
                 loop.run_until_complete(run_async())
         finally:
             loop.close()
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, v):
+        self._value = v

@@ -116,13 +116,16 @@ def default_bindings():
     def _(event):
         event.buffer.auto_down()
 
-
     bindings.add('c-a')(get_command('beginning-of-line'))
     bindings.add('c-e')(get_command('end-of-line'))
     bindings.add('c-d')(get_command('end-of-file'))
     bindings.add((Key.Escape, Key.Escape))(noop)
     bindings.add((Key.Escape, 'b'))(get_command('backward-word'))
     bindings.add((Key.Escape, 'f'))(get_command('forward-word'))
+
+    @bindings.add('c-m')
+    def _(event):
+        event.prompt.value = event.buffer.text
 
     @bindings.add((Key.Escape, 'c-m'))
     def _(event):
