@@ -1,6 +1,3 @@
-from .screen import Screen
-
-
 class Renderer:
     def __init__(self, layout, console):
         self.layout = layout
@@ -8,9 +5,6 @@ class Renderer:
         self._cursor = (0, 0)
 
     def render(self):
-        screen = Screen(width=self.console.get_size()[1])
-        self.layout.write_to_screen(screen)
-
         self.console.hide_cursor()
         self.console.cursor_horizontal_absolute(1)
         if self._cursor[0] >= 1:
@@ -21,25 +15,21 @@ class Renderer:
             self.console.cursor_up(1)
         self.console.erase_end_of_line()
 
-        data = screen.cast()
+        data = self.layout.serialize(width=self.console.get_size()[1])
         self.console.write_raw(data)
 
-        screen_cursor = screen.cursor
-        current_cursor = screen.get_wrapped_coordinates(self.layout.cursor)
-
-        diff_y = screen_cursor[0] - current_cursor[0]
+        cursor, (diff_y, diff_x) = self.layout.cursor_offset()
         if diff_y > 0:
             self.console.cursor_up(diff_y)
         else:
             self.console.cursor_down(-diff_y)
 
-        diff_x = screen_cursor[1] - current_cursor[1]
         if diff_x > 0:
             self.console.cursor_backward(diff_x)
         else:
             self.console.cursor_forward(-diff_x)
 
-        self._cursor = current_cursor
+        self._cursor = cursor
 
         self.console.show_cursor()
         self.console.flush()

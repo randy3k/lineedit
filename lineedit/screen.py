@@ -29,21 +29,3 @@ class Screen:
             lines = lines[:i] + [lines[i] + lines[i + 1]] + lines[i + 2:]
 
         return "\n".join(map(chars_to_text, lines))
-
-    def get_wrapped_coordinates(self, unwrapped):
-        """
-        Get the coordinate on screen from unwrapped row, col pair
-        """
-        # TODO: support wide chars
-        r, c = unwrapped
-        row = 0
-        for i in range(len(self.lines)):
-            if row == r:
-                if c < self.width:
-                    return i, c
-                elif i in self.wrapped:
-                    c -= self.width
-                else:
-                    return i, self.width
-            if i not in self.wrapped:
-                row += 1

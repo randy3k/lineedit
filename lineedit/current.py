@@ -17,7 +17,7 @@ def current_prompt():
 
 
 @contextmanager
-def app_change(prompt):
+def prompt_change(prompt):
     add_prompt(prompt)
     try:
         yield

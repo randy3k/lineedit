@@ -57,7 +57,9 @@ class Prompt:
                     self.renderer.render()
                 await input_hook()
 
-        with prompt_change(self), self.stream.raw_mode():
-            old_sigwinch_handler = loop.add_signal_handler(signal.SIGWINCH, on_resize)
-            loop.run_until_complete(run_async())
-            loop.add_signal_handler(signal.SIGWINCH, old_sigwinch_handler)
+        try:
+            with prompt_change(self), self.stream.raw_mode():
+                loop.add_signal_handler(signal.SIGWINCH, on_resize)
+                loop.run_until_complete(run_async())
+        finally:
+            loop.close()
