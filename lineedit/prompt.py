@@ -12,6 +12,7 @@ from .utils import is_windows
 from .renderer import Renderer
 if is_windows():
     from .win32_stream import Win32Stream
+    from .win32_console import Win32Console
 else:
     from .posix_stream import PosixStream
     from .posix_console import PosixConsole
@@ -26,6 +27,7 @@ class Prompt:
 
         if is_windows():
             self.stream = Win32Stream(sys.stdin)
+            self.console = Win32Console(sys.stdout)
         else:
             self.stream = PosixStream(sys.stdin)
             self.console = PosixConsole(sys.stdout)
@@ -64,7 +66,8 @@ class Prompt:
 
         try:
             with prompt_change(self), self.stream.raw_mode():
-                loop.add_signal_handler(signal.SIGWINCH, on_resize)
+                if not is_windows():
+                    loop.add_signal_handler(signal.SIGWINCH, on_resize)
                 loop.run_until_complete(run_async())
         finally:
             loop.close()
