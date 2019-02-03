@@ -11,11 +11,11 @@ from .utils import is_windows
 
 from .renderer import Renderer
 if is_windows():
-    from .win32_stream import Win32Stream
-    from .win32_console import Win32Console
+    from .win32_stream import Win32Stream as Stream
+    from .win32_console import Win32Console as Console
 else:
-    from .posix_stream import PosixStream
-    from .posix_console import PosixConsole
+    from .posix_stream import PosixStream as Stream
+    from .posix_console import PosixConsole as Console
 
 
 class Prompt:
@@ -25,12 +25,8 @@ class Prompt:
         self.bindings = default_bindings()
         self.processor = KeyProcessor(self.bindings)
 
-        if is_windows():
-            self.stream = Win32Stream(sys.stdin)
-            self.console = Win32Console(sys.stdout)
-        else:
-            self.stream = PosixStream(sys.stdin)
-            self.console = PosixConsole(sys.stdout)
+        self.stream = Stream(sys.stdin)
+        self.console = Console(sys.stdout)
 
         self.layout = Layout(message, self.buffer)
         self.renderer = Renderer(self.layout, self.console)

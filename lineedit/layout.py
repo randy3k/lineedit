@@ -1,4 +1,5 @@
-from .screen import Screen
+from .screen import Win32Screen, PosixScreen
+from .utils import is_windows
 
 
 class Layout:
@@ -9,8 +10,12 @@ class Layout:
         self.screen = None
 
     def serialize(self, width):
-        screen = Screen(width)
-        self.screen = screen
+        if is_windows():
+            self.screen = Win32Screen(width)
+        else:
+            self.screen = PosixScreen(width)
+
+        screen = self.screen
         indent = " " * len(self.message)
         screen.feed(self.message)
         for i, line in enumerate(self.buffer.text.split('\n')):
@@ -27,33 +32,11 @@ class Layout:
         """
         r, c = self.buffer.document.rowcol
         unwrapped = (r, c + len(self.message))
-        return self.wrapped_coordinates(unwrapped)
 
-    def wrapped_coordinates(self, unwrapped):
-        """
-        Get the wrapped coordinates on screen from unwrapped coordinates
-        """
-        # TODO: support wide chars
-
-        if not self.screen:
+        if self.screen:
+            return self.screen.wrapped_coordinates(unwrapped)
+        else:
             return unwrapped
-
-        width = self.screen.width
-        lines = self.screen.lines
-        wrapped = self.screen.wrapped
-
-        r, c = unwrapped
-        row = 0
-        for i in range(len(lines)):
-            if row == r:
-                if c < width:
-                    return i, c
-                elif i in wrapped:
-                    c -= width
-                else:
-                    return i, width
-            if i not in wrapped:
-                row += 1
 
     def cursor_offset(self):
         screen_cursor = self.screen.cursor

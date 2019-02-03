@@ -281,3 +281,7 @@ def chars_to_text(chars):
         return text + '\x1b[0m'
     else:
         return text
+
+
+def dup_char(c, data):
+    return Char(data, c.fg, c.bg, c.bold, c.underline, c.blink, c.reverse)

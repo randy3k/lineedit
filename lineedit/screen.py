@@ -1,14 +1,37 @@
-from .char import text_to_chars, chars_to_text, Char
-from .utils import is_windows
+from .char import text_to_chars, chars_to_text, dup_char
 
 
-class PosixScreen:
+class Screen:
     def __init__(self, width):
         self.width = width
         self.cursor = (0, 0)
         self.lines = []
         self.wrapped = []
 
+    def wrapped_coordinates(self, unwrapped):
+        """
+        Get the wrapped coordinates on screen from unwrapped coordinates
+        """
+        # TODO: support wide chars
+
+        width = self.width
+        wrapped = self.wrapped
+
+        r, c = unwrapped
+        row = 0
+        for i in range(len(self.lines)):
+            if row == r:
+                if c < width:
+                    return i, c
+                elif i in wrapped:
+                    c -= width
+                else:
+                    return i, width
+            if i not in wrapped:
+                row += 1
+
+
+class PosixScreen(Screen):
     def feed(self, chars):
         for c in text_to_chars(chars):
             if c.data == "\n":
@@ -32,13 +55,7 @@ class PosixScreen:
         return "\n".join(map(chars_to_text, lines))
 
 
-class Win32Screen:
-    def __init__(self, width):
-        self.width = width
-        self.cursor = (0, 0)
-        self.lines = []
-        self.wrapped = []
-
+class Win32Screen(Screen):
     def feed(self, chars):
         for c in text_to_chars(chars):
             if self.cursor[1] == self.width:
@@ -64,14 +81,6 @@ class Win32Screen:
 
         for l, line in enumerate(lines):
             if line and len(line) % self.width == 0:
-                c = line[-1]
-                new_line = Char('\n', c.fg, c.bg, c.bold, c.underline, c.blink, c.reverse)
-                lines[l] += [new_line]
+                lines[l] += [dup_char(line[-1], "\n")]
 
         return "\n".join(map(chars_to_text, lines))
-
-
-if is_windows():
-    Screen = Win32Screen
-else:
-    Screen = PosixScreen
