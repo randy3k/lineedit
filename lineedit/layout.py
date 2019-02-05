@@ -21,7 +21,8 @@ class Layout:
         for i, line in enumerate(self.buffer.text.split('\n')):
             if i > 0:
                 screen.feed('\n')
-                screen.feed(indent)
+                if len(line) > 0:
+                    screen.feed(indent)
             screen.feed(line)
         return screen.cast()
 

@@ -30,6 +30,8 @@ class Screen:
             if i not in wrapped:
                 row += 1
 
+        return (len(self.lines), 0)
+
 
 class PosixScreen(Screen):
     def feed(self, chars):
@@ -41,7 +43,8 @@ class PosixScreen(Screen):
                 self.cursor = (self.cursor[0] + 1, 0)
 
             if self.cursor[0] >= len(self.lines):
-                self.lines = self.lines + [[]] * (self.cursor[0] - len(self.lines) + 1)
+                for i in range(self.cursor[0] - len(self.lines) + 1):
+                    self.lines.append([])
 
             if c.data != "\n":
                 self.lines[self.cursor[0]].insert(self.cursor[1], c)
@@ -50,7 +53,8 @@ class PosixScreen(Screen):
     def cast(self):
         lines = self.lines[:]
         for i in reversed(self.wrapped):
-            lines = lines[:i] + [lines[i] + lines[i + 1]] + lines[i + 2:]
+            if i + 1 < len(lines):
+                lines = lines[:i] + [lines[i] + lines[i + 1]] + lines[i + 2:]
 
         return "\n".join(map(chars_to_text, lines))
 
@@ -66,9 +70,8 @@ class Win32Screen(Screen):
                 self.wrapped.append(self.cursor[0])
 
             if self.cursor[0] >= len(self.lines):
-                self.lines = self.lines + [[]] * (self.cursor[0] - len(self.lines) + 1)
-            elif self.cursor[0] in self.wrapped and self.cursor[0] + 1 >= len(self.lines):
-                self.lines = self.lines + [[]] * (self.cursor[0] - len(self.lines) + 2)
+                for i in range(self.cursor[0] - len(self.lines) + 1):
+                    self.lines.append([])
 
             if c.data != "\n":
                 self.lines[self.cursor[0]].insert(self.cursor[1], c)
@@ -76,11 +79,9 @@ class Win32Screen(Screen):
 
     def cast(self):
         lines = self.lines[:]
-        for i in reversed(self.wrapped):
-            lines = lines[:i] + [lines[i] + lines[i + 1]] + lines[i + 2:]
 
-        for l, line in enumerate(lines):
-            if line and len(line) % self.width == 0:
-                lines[l] += [dup_char(line[-1], "\n")]
+        for i in reversed(self.wrapped):
+            if i + 1 < len(lines) and len(lines[i + 1]) > 0:
+                lines = lines[:i] + [lines[i] + lines[i + 1]] + lines[i + 2:]
 
         return "\n".join(map(chars_to_text, lines))

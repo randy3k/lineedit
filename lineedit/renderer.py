@@ -6,13 +6,12 @@ class Renderer:
 
     def render(self):
         self.console.hide_cursor()
+        # we don't apply erase_down directly to avoid screen being pushed to history
+        # in some terminals
+        self.console.cursor_up(self._cursor[0])
+        self.console.cursor_horizontal_absolute(2)
+        self.console.erase_down()
         self.console.cursor_horizontal_absolute(1)
-        if self._cursor[0] >= 1:
-            # we don't apply erase_down directly to avoid screen being pushed to history
-            # in some terminals
-            self.console.cursor_up(self._cursor[0] - 1)
-            self.console.erase_down()
-            self.console.cursor_up(1)
         self.console.erase_end_of_line()
 
         data = self.layout.serialize(width=self.console.get_size()[1])
