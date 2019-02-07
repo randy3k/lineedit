@@ -1,4 +1,10 @@
+import re
+
 from .utils import find_nth
+
+
+PREVIOUS_WORD_BOUNDARY = re.compile(r"\b(?=\w)")
+NEXT_WORD_BOUNDARY = re.compile(r"(?<=\w)\b")
 
 
 class Document:
@@ -13,6 +19,15 @@ class Document:
         self._text = self._text[0:cursor] + text + self._text[cursor:]
         self.cursor = cursor + len(text)
 
+    def remove_char(self, forward=False):
+        cursor = self.cursor
+        if forward:
+            self._text = self._text[0:cursor] + self._text[cursor + 1:]
+            self.cursor = cursor
+        else:
+            self._text = self._text[0:cursor - 1] + self._text[cursor:]
+            self.cursor = cursor - 1
+
     @property
     def text(self):
         return self._text
@@ -22,12 +37,16 @@ class Document:
         return self._text[0:self.cursor]
 
     @property
+    def text_after_cursor(self):
+        return self._text[self.cursor:]
+
+    @property
     def cursor(self):
         return self._cursor
 
     @cursor.setter
     def cursor(self, value):
-        if value > len(self.text) or value == -1:
+        if value > len(self.text):
             value = len(self.text)
         self._cursor = value
 
@@ -54,6 +73,8 @@ class Document:
             r = 0
 
         if row == 0:
+            if c == -1:
+                c = len(self.text) - 1
             self.cursor = c
             return
 
@@ -92,6 +113,38 @@ class Document:
     def move_cursor_down(self, amount=1):
         r, c = self.rowcol
         self.rowcol = (r + amount, c)
+
+    def _previous_word_position(self):
+        text_before_cursor = self.text_before_cursor
+        pos = [it.start() for it in PREVIOUS_WORD_BOUNDARY.finditer(text_before_cursor)]
+        if pos:
+            return pos[-1]
+        else:
+            return -1
+
+    def move_cursor_to_previous_word(self):
+        pos = self._previous_word_position()
+        if pos >= 0:
+            self.cursor = pos
+
+    def delete_previous_word(self):
+        pos = self._previous_word_position()
+        if pos >= 0:
+            self._text = self._text[:pos] + self.text_after_cursor
+            self.cursor = pos
+
+    def _next_word_position(self):
+        text_after_cursor = self.text_after_cursor
+        m = NEXT_WORD_BOUNDARY.search(text_after_cursor)
+        if m:
+            return self.cursor + m.start()
+        else:
+            return -1
+
+    def move_cursor_to_next_word(self):
+        pos = self._next_word_position()
+        if pos >= 0:
+            self.cursor = pos
 
 
 class Buffer:

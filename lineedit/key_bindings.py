@@ -1,10 +1,11 @@
 from collections import OrderedDict
-from .readline import get_command
-from .key import Key
+from .key import Key, KEY_ALIASES
 
 
 def _Key(key):
     try:
+        if key in KEY_ALIASES:
+            key = KEY_ALIASES[key]
         return Key(key)
     except ValueError:
         return key
@@ -116,20 +117,64 @@ def default_bindings():
     def _(event):
         event.buffer.auto_down()
 
-    bindings.add('c-a')(get_command('beginning-of-line'))
-    bindings.add('c-e')(get_command('end-of-line'))
-    bindings.add('c-d')(get_command('end-of-file'))
-    bindings.add((Key.Escape, Key.Escape))(noop)
-    bindings.add((Key.Escape, 'b'))(get_command('backward-word'))
-    bindings.add((Key.Escape, 'f'))(get_command('forward-word'))
+    @bindings.add('backspace')
+    def _(event):
+        event.buffer.document.remove_char()
 
-    @bindings.add('c-m')
+    @bindings.add('delete')
+    def _(event):
+        event.buffer.document.remove_char(forward=True)
+
+    @bindings.add('c-a')
+    def _(event):
+        event.buffer.document.move_cursor_to_bol()
+
+    @bindings.add('c-e')
+    def _(event):
+        event.buffer.document.move_cursor_to_eol()
+
+    @bindings.add('c-b')
+    def _(event):
+        event.buffer.document.cursor -= 1
+
+    @bindings.add('c-f')
+    def _(event):
+        event.buffer.document.cursor += 1
+
+    @bindings.add((Key.Escape, 'backspace'))
+    def _(event):
+        event.buffer.document.delete_previous_word()
+
+    @bindings.add('c-w')
+    def _(event):
+        event.buffer.document.delete_previous_word()
+
+    @bindings.add('c-d')
+    def _(event):
+        raise
+
+    bindings.add((Key.Escape, Key.Escape))(noop)
+
+    @bindings.add((Key.Escape, 'b'))
+    def _(event):
+        event.buffer.document.move_cursor_to_previous_word()
+
+    @bindings.add((Key.Escape, 'f'))
+    def _(event):
+        event.buffer.document.move_cursor_to_next_word()
+
+    @bindings.add('enter')
     def _(event):
         event.prompt.value = event.buffer.text
 
-    @bindings.add((Key.Escape, 'c-m'))
+    @bindings.add((Key.Escape, 'enter'))
     def _(event):
         event.buffer.insert_text('\n')
 
-    bindings.add('<any>')(get_command('self-insert'))
+    @bindings.add('<any>')
+    def _(event):
+        for key in event.keys:
+            if isinstance(key, str) and ord(key) < 128:
+                event.buffer.insert_text(key)
+
     return bindings

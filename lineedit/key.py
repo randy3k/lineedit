@@ -102,6 +102,14 @@ class Key(Enum):
     Any = '<any>'
 
 
+KEY_ALIASES = {
+    'backspace': 'c-h',
+    'c-space': 'c-@',
+    'enter': 'c-m',
+    'tab': 'c-i',
+}
+
+
 CTRL_SEQUENCES = {
     '\x00': Key.ControlAt,
     '\x01': Key.ControlA,
