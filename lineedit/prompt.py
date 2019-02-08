@@ -3,6 +3,7 @@ import signal
 import sys
 
 from .buffer import Buffer
+from .completions import CompletionsMenu
 from .current import prompt_change
 from .layout import Layout
 from .key_bindings import default_bindings
@@ -19,16 +20,19 @@ else:
 
 
 class Prompt:
-    def __init__(self, message=''):
+    def __init__(self, message='', completer=None):
         self._value = None
         self.buffer = Buffer()
+        self.search_buffer = Buffer()
+        self.completions_menu = CompletionsMenu()
+
         self.bindings = default_bindings()
         self.processor = KeyProcessor(self.bindings)
 
         self.stream = Stream(sys.stdin)
         self.console = Console(sys.stdout)
 
-        self.layout = Layout(message, self.buffer)
+        self.layout = Layout(message, self.buffer, self.search_buffer, self.completions_menu)
         self.renderer = Renderer(self.layout, self.console)
 
     def run(self):

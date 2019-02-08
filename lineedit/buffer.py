@@ -19,7 +19,8 @@ class Document:
         self._text = self._text[0:cursor] + text + self._text[cursor:]
         self.cursor = cursor + len(text)
 
-    def remove_char(self, forward=False):
+    def delete_char(self, forward=False):
+        # TODO: support kill ring
         cursor = self.cursor
         if forward:
             self._text = self._text[0:cursor] + self._text[cursor + 1:]
@@ -48,12 +49,14 @@ class Document:
     def cursor(self, value):
         if value > len(self.text):
             value = len(self.text)
+        elif value < 0:
+            value = 0
         self._cursor = value
 
-    @property
-    def rowcol(self):
-        value = self.cursor
-        text_before_cursor = self._text[0:value]
+    def rowcol(self, cursor=None):
+        if cursor is None:
+            cursor = self.cursor
+        text_before_cursor = self._text[0:cursor]
         row = self.text_before_cursor.count('\n')
         if row == 0:
             col = len(text_before_cursor)
@@ -63,9 +66,7 @@ class Document:
 
         return row, col
 
-    @rowcol.setter
-    def rowcol(self, rc):
-        r, c = rc
+    def text_point(self, r, c):
         row = self.text.count('\n')
         if r > row:
             r, c = self.rowcol
@@ -75,8 +76,7 @@ class Document:
         if row == 0:
             if c == -1:
                 c = len(self.text) - 1
-            self.cursor = c
-            return
+            return (0, c)
 
         linefeed = find_nth(self.text, '\n', r)
         next_linefeed = find_nth(self.text, '\n', r + 1)
@@ -84,17 +84,17 @@ class Document:
             next_linefeed = len(self.text)
 
         if c == -1:
-            self.cursor = next_linefeed
+            return next_linefeed
         else:
-            self.cursor = min(linefeed + c + 1, next_linefeed)
+            return min(linefeed + c + 1, next_linefeed)
 
     def move_cursor_to_bol(self):
-        r, c = self.rowcol
-        self.rowcol = (r, 0)
+        r, c = self.rowcol()
+        self.cursor = self.text_point(r, 0)
 
     def move_cursor_to_eol(self):
-        r, c = self.rowcol
-        self.rowcol = (r, -1)
+        r, c = self.rowcol()
+        self.cursor = self.text_point(r, -1)
 
     def move_cursor_to_left(self, amount=1):
         if self.cursor - amount < 0:
@@ -107,12 +107,12 @@ class Document:
 
     def move_cursor_up(self, amount=1):
         # TODO: remember column position for consecutive up
-        r, c = self.rowcol
-        self.rowcol = (r - amount, c)
+        r, c = self.rowcol()
+        self.cursor = self.text_point(r - amount, c)
 
     def move_cursor_down(self, amount=1):
-        r, c = self.rowcol
-        self.rowcol = (r + amount, c)
+        r, c = self.rowcol()
+        self.cursor = self.text_point(r + amount, c)
 
     def _previous_word_position(self):
         text_before_cursor = self.text_before_cursor

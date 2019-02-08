@@ -119,11 +119,11 @@ def default_bindings():
 
     @bindings.add('backspace')
     def _(event):
-        event.buffer.document.remove_char()
+        event.buffer.document.delete_char()
 
     @bindings.add('delete')
     def _(event):
-        event.buffer.document.remove_char(forward=True)
+        event.buffer.document.delete_char(forward=True)
 
     @bindings.add('c-a')
     def _(event):
@@ -135,11 +135,11 @@ def default_bindings():
 
     @bindings.add('c-b')
     def _(event):
-        event.buffer.document.cursor -= 1
+        event.buffer.docuemtn.move_cursor_to_left()
 
     @bindings.add('c-f')
     def _(event):
-        event.buffer.document.cursor += 1
+        event.buffer.docuemtn.move_cursor_to_right()
 
     @bindings.add((Key.Escape, 'backspace'))
     def _(event):

@@ -10,7 +10,7 @@ class Char(namedtuple(
 
     def __new__(
             cls, data, fg='default', bg='default',
-            bold=False, underline=False, blink=False, reverse=False):
+            bold=False, underline=False, blink=False, reverse=False,):
         return super(Char, cls).__new__(
             cls, data, fg, bg, bold, underline, blink, reverse)
 

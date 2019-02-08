@@ -1,12 +1,20 @@
-from .char import text_to_chars, chars_to_text, dup_char
+from .char import chars_to_text
 
 
 class Screen:
     def __init__(self, width):
         self.width = width
-        self.cursor = (0, 0)
+        self.cursor = (0, 0)  # running marked_cursor
+        self.marked_cursor = (0, 0)  # actual marked_cursor position
         self.lines = []
         self.wrapped = []
+
+    def feed(self, chars, mark=None):
+        for c in chars:
+            self._feed(c)
+
+    def mark(self):
+        self.marked_cursor = self.cursor
 
     def wrapped_coordinates(self, unwrapped):
         """
@@ -34,21 +42,20 @@ class Screen:
 
 
 class PosixScreen(Screen):
-    def feed(self, chars):
-        for c in text_to_chars(chars):
-            if c.data == "\n":
-                self.cursor = (self.cursor[0] + 1, 0)
-            elif self.cursor[1] == self.width:
-                self.wrapped.append(self.cursor[0])
-                self.cursor = (self.cursor[0] + 1, 0)
+    def _feed(self, c):
+        if c.data == "\n":
+            self.cursor = (self.cursor[0] + 1, 0)
+        elif self.cursor[1] == self.width:
+            self.wrapped.append(self.cursor[0])
+            self.cursor = (self.cursor[0] + 1, 0)
 
-            if self.cursor[0] >= len(self.lines):
-                for i in range(self.cursor[0] - len(self.lines) + 1):
-                    self.lines.append([])
+        if self.cursor[0] >= len(self.lines):
+            for i in range(self.cursor[0] - len(self.lines) + 1):
+                self.lines.append([])
 
-            if c.data != "\n":
-                self.lines[self.cursor[0]].insert(self.cursor[1], c)
-                self.cursor = (self.cursor[0], self.cursor[1] + 1)
+        if c.data != "\n":
+            self.lines[self.cursor[0]].insert(self.cursor[1], c)
+            self.cursor = (self.cursor[0], self.cursor[1] + 1)
 
     def cast(self):
         lines = self.lines[:]
@@ -60,22 +67,21 @@ class PosixScreen(Screen):
 
 
 class Win32Screen(Screen):
-    def feed(self, chars):
-        for c in text_to_chars(chars):
-            if self.cursor[1] == self.width:
-                self.cursor = (self.cursor[0] + 1, 0)
-            if c.data == "\n":
-                self.cursor = (self.cursor[0] + 1, 0)
-            elif self.cursor[1] == self.width - 1:
-                self.wrapped.append(self.cursor[0])
+    def _feed(self, c):
+        if self.cursor[1] == self.width:
+            self.cursor = (self.cursor[0] + 1, 0)
+        if c.data == "\n":
+            self.cursor = (self.cursor[0] + 1, 0)
+        elif self.cursor[1] == self.width - 1:
+            self.wrapped.append(self.cursor[0])
 
-            if self.cursor[0] >= len(self.lines):
-                for i in range(self.cursor[0] - len(self.lines) + 1):
-                    self.lines.append([])
+        if self.cursor[0] >= len(self.lines):
+            for i in range(self.cursor[0] - len(self.lines) + 1):
+                self.lines.append([])
 
-            if c.data != "\n":
-                self.lines[self.cursor[0]].insert(self.cursor[1], c)
-                self.cursor = (self.cursor[0], self.cursor[1] + 1)
+        if c.data != "\n":
+            self.lines[self.cursor[0]].insert(self.cursor[1], c)
+            self.cursor = (self.cursor[0], self.cursor[1] + 1)
 
     def cast(self):
         lines = self.lines[:]
