@@ -26,7 +26,7 @@ class Win32Console(Vt100Console):
 
     def get_cursor_position(self):
         sbinfo = self.get_screen_buffer_info()
-        return (sinfo.dwCursorPosition.Y, sinfo.dwCursorPosition.X)
+        return (sbinfo.dwCursorPosition.Y, sbinfo.dwCursorPosition.X)
 
     def flush(self):
         original_mode = DWORD(0)

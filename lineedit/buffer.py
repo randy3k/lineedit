@@ -69,7 +69,7 @@ class Document:
     def text_point(self, r, c):
         row = self.text.count('\n')
         if r > row:
-            r, c = self.rowcol
+            r, c = self.rowcol()
         elif r < 0:
             r = 0
 

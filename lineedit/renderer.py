@@ -43,28 +43,14 @@ class Renderer:
         self.console.erase_end_of_line()
 
         self.console.write_raw(data)
-        self.move_console_cursor_after_write(screen)
-
+        self.console.cursor_up(len(screen.lines) - 1)
+        self.console.cursor_horizontal_absolute(0)
+        self.console.cursor_down(screen.marked_cursor[0])
+        self.console.cursor_forward(screen.marked_cursor[1])
+        self.screen_cursor = screen.marked_cursor
         self.console.show_cursor()
         self.request_console_cursor_position()
         self.console.flush()
-
-    def move_console_cursor_after_write(self, screen):
-        row = len(screen.lines) - 1
-        col = len(screen.lines[row])
-
-        diff_y = row - screen.marked_cursor[0]
-        if diff_y > 0:
-            self.console.cursor_up(diff_y)
-        else:
-            self.console.cursor_down(-diff_y)
-
-        diff_x = col - screen.marked_cursor[1]
-        if diff_x > 0:
-            self.console.cursor_backward(diff_x)
-        else:
-            self.console.cursor_forward(-diff_x)
-        self.screen_cursor = screen.marked_cursor
 
     def request_console_cursor_position(self):
         # it should only be called after rendering
