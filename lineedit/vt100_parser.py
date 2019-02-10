@@ -50,6 +50,7 @@ class Vt100Parser:
             match = CPRResponsePattern.match(prefix)
             if match:
                 self._callback(Key.CPRResponse, (int(match.group(1)), int(match.group(2))))
+
                 prefix = ""
                 continue
 

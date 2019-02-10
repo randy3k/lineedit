@@ -39,7 +39,6 @@ class Prompt:
         self.console.enable_bracketed_paste()
         self.console.enable_autowrap()
         self.console.flush()
-        self.renderer.render()
 
         loop = asyncio.get_event_loop()
 
@@ -53,15 +52,24 @@ class Prompt:
                 await asyncio.sleep(0.03)
 
         async def run_async():
+            self.renderer.render()
+            self.renderer.request_console_cursor_position()
+
             while True:
                 if self.stream.wait_until_ready(timeout=0):
+                    in_cpr = self.renderer.waiting_cpr_response
                     data = self.stream.read()
                     self.processor.feed(data)
                     self.renderer.render()
+                    if self.value is None and not in_cpr:
+                        self.renderer.request_console_cursor_position()
+
                 if self.value is not None:
                     self.console.write("\n")
+                    self.console.erase_down()
                     self.console.flush()
                     break
+
                 await input_hook()
 
         try:

@@ -14,16 +14,20 @@ class Screen:
             self._feed(c)
 
     def draw_at(self, row, col, char):
-        self.ensure_row(row)
+        self.ensure_position(row, col)
+        self.lines[row][col] = char
 
-
-    def ensure_row(self, row=None):
-        if row is None:
-            row = self.cursor[0]
-
+    def ensure_row(self, row):
         if row >= len(self.lines):
             for i in range(row - len(self.lines) + 1):
                 self.lines.append([])
+
+    def ensure_position(self, row, col):
+        self.ensure_row(row)
+        line = self.lines[row]
+        if col >= len(line):
+            for i in range(col - len(line) + 1):
+                line.append(Char(" "))
 
     def mark(self):
         self.marked_cursor = self.cursor
@@ -61,7 +65,7 @@ class PosixScreen(Screen):
             self.wrapped.append(self.cursor[0])
             self.cursor = (self.cursor[0] + 1, 0)
 
-        self.ensure_row()
+        self.ensure_row(self.cursor[0])
 
         if c.data != "\n":
             self.lines[self.cursor[0]].insert(self.cursor[1], c)
@@ -85,7 +89,7 @@ class Win32Screen(Screen):
         elif self.cursor[1] == self.width - 1:
             self.wrapped.append(self.cursor[0])
 
-        self.ensure_row()
+        self.ensure_row(self.cursor[0])
 
         if c.data != "\n":
             self.lines[self.cursor[0]].insert(self.cursor[1], c)

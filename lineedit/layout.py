@@ -1,5 +1,6 @@
 from .char import text_to_chars
 
+
 class Layout:
 
     def __init__(self, message, buf, search_buffer, completions_menu):
@@ -26,3 +27,5 @@ class Layout:
                 screen.feed(chars[c:])
             else:
                 screen.feed(chars)
+
+        self.completions_menu.write_to_screen(screen)
