@@ -53,16 +53,12 @@ class Prompt:
 
         async def run_async():
             self.renderer.render()
-            self.renderer.request_console_cursor_position()
 
             while True:
                 if self.stream.wait_until_ready(timeout=0):
-                    in_cpr = self.renderer.waiting_cpr_response
                     data = self.stream.read()
                     self.processor.feed(data)
                     self.renderer.render()
-                    if self.value is None and not in_cpr:
-                        self.renderer.request_console_cursor_position()
 
                 if self.value is not None:
                     self.console.write("\n")

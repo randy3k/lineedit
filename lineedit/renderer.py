@@ -20,7 +20,15 @@ class Renderer:
         data = screen.cast()
 
         if data == self.previous_cast:
+            # TODO: diff screen to write
             # it would happen if we have received data which doens't change the UI, e.g. CPR
+            self.console.hide_cursor()
+            self.console.cursor_up(self.screen_cursor[0])
+            self.console.cursor_horizontal_absolute(0)
+            self.console.cursor_down(screen.marked_cursor[0])
+            self.console.cursor_forward(screen.marked_cursor[1])
+            self.console.show_cursor()
+            self.console.flush()
             return
 
         self.previous_cast = data
@@ -35,13 +43,12 @@ class Renderer:
         self.console.erase_end_of_line()
 
         self.console.write_raw(data)
-
-        self.move_console_cursor(screen)
+        self.move_console_cursor_after_write(screen)
 
         self.console.show_cursor()
         self.console.flush()
 
-    def move_console_cursor(self, screen):
+    def move_console_cursor_after_write(self, screen):
         row = len(screen.lines) - 1
         col = len(screen.lines[row])
 

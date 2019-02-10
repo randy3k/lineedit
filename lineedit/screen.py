@@ -66,9 +66,8 @@ class PosixScreen(Screen):
             self.cursor = (self.cursor[0] + 1, 0)
 
         self.ensure_row(self.cursor[0])
-
         if c.data != "\n":
-            self.lines[self.cursor[0]].insert(self.cursor[1], c)
+            self.draw_at(self.cursor[0], self.cursor[1], c)
             self.cursor = (self.cursor[0], self.cursor[1] + 1)
 
     def cast(self):
@@ -90,9 +89,8 @@ class Win32Screen(Screen):
             self.wrapped.append(self.cursor[0])
 
         self.ensure_row(self.cursor[0])
-
         if c.data != "\n":
-            self.lines[self.cursor[0]].insert(self.cursor[1], c)
+            self.draw_at(self.cursor[0], self.cursor[1], c)
             self.cursor = (self.cursor[0], self.cursor[1] + 1)
 
     def cast(self):

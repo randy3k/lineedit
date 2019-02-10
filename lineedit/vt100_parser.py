@@ -3,7 +3,7 @@ from .key import Key, is_ansi_prefix, get_ansi_key
 
 
 CPRResponsePattern = re.compile("\x1b\\[(\\d+);(\\d+)R$")
-CPRResponsePrefixPattern = re.compile("\x1b\\[[\\d;]?")
+CPRResponsePrefixPattern = re.compile("\x1b\\[[\\d;]?$")
 
 
 class Vt100Parser:
@@ -50,7 +50,6 @@ class Vt100Parser:
             match = CPRResponsePattern.match(prefix)
             if match:
                 self._callback(Key.CPRResponse, (int(match.group(1)), int(match.group(2))))
-
                 prefix = ""
                 continue
 
