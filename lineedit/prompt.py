@@ -24,7 +24,7 @@ class Prompt:
         self._value = None
         self.buffer = Buffer()
         self.search_buffer = Buffer()
-        self.completions_menu = CompletionsMenu()
+        self.completions_menu = CompletionsMenu(completer)
 
         self.bindings = default_bindings()
         self.processor = KeyProcessor(self.bindings)

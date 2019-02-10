@@ -13,12 +13,20 @@ class Win32Console(Vt100Console):
         super().__init__(*args, **kwargs)
         self._hconsole = windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
 
-    def get_size(self):
+    def get_screen_buffer_info(self):
         sbinfo = CONSOLE_SCREEN_BUFFER_INFO()
         windll.kernel32.GetConsoleScreenBufferInfo(self._hconsole, byref(sbinfo))
+        return sbinfo
+
+    def get_size(self):
+        sbinfo = self.get_screen_buffer_info()
         height = sbinfo.srWindow.Bottom - sbinfo.srWindow.Top + 1
         width = sbinfo.dwSize.X
         return (height, width)
+
+    def get_cursor_position(self):
+        sbinfo = self.get_screen_buffer_info()
+        return (sinfo.dwCursorPosition.Y, sinfo.dwCursorPosition.X)
 
     def flush(self):
         original_mode = DWORD(0)

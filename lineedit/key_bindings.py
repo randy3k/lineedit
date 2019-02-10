@@ -171,6 +171,11 @@ def default_bindings():
     def _(event):
         event.buffer.insert_text('\n')
 
+    @bindings.add(Key.CPRResponse)
+    def _(event):
+        r, c = event.data[0]
+        event.prompt.renderer.report_console_cursor_position(r - 1, c - 1)
+
     @bindings.add('<any>')
     def _(event):
         for key in event.keys:

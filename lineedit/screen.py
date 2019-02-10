@@ -1,4 +1,4 @@
-from .char import chars_to_text
+from .char import chars_to_text, Char
 
 
 class Screen:
@@ -9,9 +9,21 @@ class Screen:
         self.lines = []
         self.wrapped = []
 
-    def feed(self, chars, mark=None):
+    def feed(self, chars):
         for c in chars:
             self._feed(c)
+
+    def draw_at(self, row, col, char):
+        self.ensure_row(row)
+
+
+    def ensure_row(self, row=None):
+        if row is None:
+            row = self.cursor[0]
+
+        if row >= len(self.lines):
+            for i in range(row - len(self.lines) + 1):
+                self.lines.append([])
 
     def mark(self):
         self.marked_cursor = self.cursor
@@ -49,9 +61,7 @@ class PosixScreen(Screen):
             self.wrapped.append(self.cursor[0])
             self.cursor = (self.cursor[0] + 1, 0)
 
-        if self.cursor[0] >= len(self.lines):
-            for i in range(self.cursor[0] - len(self.lines) + 1):
-                self.lines.append([])
+        self.ensure_row()
 
         if c.data != "\n":
             self.lines[self.cursor[0]].insert(self.cursor[1], c)
@@ -75,9 +85,7 @@ class Win32Screen(Screen):
         elif self.cursor[1] == self.width - 1:
             self.wrapped.append(self.cursor[0])
 
-        if self.cursor[0] >= len(self.lines):
-            for i in range(self.cursor[0] - len(self.lines) + 1):
-                self.lines.append([])
+        self.ensure_row()
 
         if c.data != "\n":
             self.lines[self.cursor[0]].insert(self.cursor[1], c)

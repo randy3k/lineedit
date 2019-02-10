@@ -1,33 +1,47 @@
-from .screen import Win32Screen, PosixScreen
 from .utils import is_windows
+if is_windows():
+    from .screen import Win32Screen as Screen
+else:
+    from .screen import PosixScreen as Screen
 
 
 class Renderer:
     def __init__(self, layout, console):
         self.layout = layout
         self.console = console
-        self._cursor = (0, 0)
+        self.screen_cursor = (0, 0)  # relative to the first line of prompt
+        self.console_cursor = None   # relative to the first line of terminal
+        self.previous_cast = None
 
     def render(self):
-        if is_windows():
-            screen = Win32Screen(width=self.console.get_size()[1])
-        else:
-            screen = PosixScreen(width=self.console.get_size()[1])
+        screen = Screen(width=self.console.get_size()[1])
+        self.layout.write_to_screen(screen)
+        data = screen.cast()
+
+        if data == self.previous_cast:
+            # it would happen if we have received data which doens't change the UI, e.g. CPR
+            return
+
+        self.previous_cast = data
 
         self.console.hide_cursor()
         # we don't apply erase_down directly to avoid screen being pushed to history
         # in some terminals
-        self.console.cursor_up(self._cursor[0])
+        self.console.cursor_up(self.screen_cursor[0])
         self.console.cursor_horizontal_absolute(2)
         self.console.erase_down()
         self.console.cursor_horizontal_absolute(1)
         self.console.erase_end_of_line()
 
-        self.layout.write_to_screen(screen)
-
-        data = screen.cast()
         self.console.write_raw(data)
 
+        self.move_console_cursor(screen)
+        self.request_console_cursor_position()
+
+        self.console.show_cursor()
+        self.console.flush()
+
+    def move_console_cursor(self, screen):
         diff_y = screen.cursor[0] - screen.marked_cursor[0]
         if diff_y > 0:
             self.console.cursor_up(diff_y)
@@ -39,8 +53,15 @@ class Renderer:
             self.console.cursor_backward(diff_x)
         else:
             self.console.cursor_forward(-diff_x)
+        self.screen_cursor = screen.marked_cursor
 
-        self._cursor = screen.marked_cursor
+    def request_console_cursor_position(self):
+        if is_windows():
+            r, c = self.console.get_cursor_position()
+            self.report_console_cursor_position(r, c)
+        else:
+            # the key processor will call `report_console_cursor_position`
+            self.console.ask_for_cpr()
 
-        self.console.show_cursor()
-        self.console.flush()
+    def report_console_cursor_position(self, r, c):
+        self.console_cursor = (r, c)

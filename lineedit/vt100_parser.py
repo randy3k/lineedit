@@ -1,4 +1,9 @@
+import re
 from .key import Key, is_ansi_prefix, get_ansi_key
+
+
+CPRResponsePattern = re.compile("\x1b\\[(\\d+);(\\d+)R$")
+CPRResponsePrefixPattern = re.compile("\x1b\\[[\\d;]?")
 
 
 class Vt100Parser:
@@ -42,7 +47,13 @@ class Vt100Parser:
                 char = yield
                 prefix += char
 
-            is_prefix = is_ansi_prefix(prefix)
+            match = CPRResponsePattern.match(prefix)
+            if match:
+                self._callback(Key.CPRResponse, (int(match.group(1)), int(match.group(2))))
+                prefix = ""
+                continue
+
+            is_prefix = is_ansi_prefix(prefix) or CPRResponsePrefixPattern.match(prefix)
             if is_prefix:
                 continue
 
