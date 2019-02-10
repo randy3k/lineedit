@@ -46,6 +46,7 @@ class Renderer:
         self.move_console_cursor_after_write(screen)
 
         self.console.show_cursor()
+        self.request_console_cursor_position()
         self.console.flush()
 
     def move_console_cursor_after_write(self, screen):
@@ -66,6 +67,7 @@ class Renderer:
         self.screen_cursor = screen.marked_cursor
 
     def request_console_cursor_position(self):
+        # it should only be called after rendering
         if self.waiting_cpr_response:
             return
 
