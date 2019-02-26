@@ -106,7 +106,7 @@ KEY_ALIASES = {
     'backspace': 'c-h',
     'c-space': 'c-@',
     'enter': 'c-m',
-    'tab': 'c-i',
+    'tab': 'c-i'
 }
 
 

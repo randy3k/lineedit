@@ -6,7 +6,7 @@ class Completer:
 
     def get_completions(self, document):
         text_before_cursor = document.text_before_cursor
-        for word in words:
+        for word in self.words:
             if word.startswith(text_before_cursor):
                 yield (word, -len(text_before_cursor))
 

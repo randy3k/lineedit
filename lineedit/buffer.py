@@ -76,7 +76,7 @@ class Document:
         if row == 0:
             if c == -1:
                 c = len(self.text) - 1
-            return (0, c)
+            return c
 
         linefeed = find_nth(self.text, '\n', r)
         next_linefeed = find_nth(self.text, '\n', r + 1)

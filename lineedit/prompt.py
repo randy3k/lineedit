@@ -24,7 +24,7 @@ class Prompt:
         self._value = None
         self.buffer = Buffer()
         self.search_buffer = Buffer()
-        self.completions_menu = CompletionsMenu(completer)
+        self.completions_menu = CompletionsMenu(self.buffer, completer)
 
         self.bindings = default_bindings()
         self.processor = KeyProcessor(self.bindings)
@@ -75,6 +75,9 @@ class Prompt:
                 loop.run_until_complete(run_async())
         finally:
             loop.close()
+
+    def auto_complete(self):
+        self.completions_menu.show()
 
     @property
     def value(self):

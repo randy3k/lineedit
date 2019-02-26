@@ -176,6 +176,10 @@ def default_bindings():
         r, c = event.data[0]
         event.prompt.renderer.report_console_cursor_position(r - 1, c - 1)
 
+    @bindings.add('tab')
+    def _(event):
+        event.prompt.auto_complete()
+
     @bindings.add('<any>')
     def _(event):
         for key in event.keys:
