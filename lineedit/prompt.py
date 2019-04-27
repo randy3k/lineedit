@@ -204,7 +204,7 @@ class ModalPromptSession(PromptSession):
 
         self._restore_settings()
         for name in self._fields:
-            if name is not "key_bindings":
+            if name != "key_bindings":
                 if hasattr(mode, name):
                     setattr(self, name, getattr(mode, name))
 
