@@ -11,28 +11,28 @@ session = ModalPromptSession()
 default_focused = has_focus(DEFAULT_BUFFER)
 
 pkb = KeyBindings()
-@pkb.add('q', filter = default_focused)
+@pkb.add('q', filter=default_focused)
 def _(event):
     session.change_mode("q")
 
 
 qkb = KeyBindings()
-@qkb.add('p', filter = default_focused)
+@qkb.add('p', filter=default_focused)
 def _(event):
     session.change_mode("p")
 
 
 rkb = KeyBindings()
-@rkb.add('p', filter = default_focused)
+@rkb.add('p', filter=default_focused)
 def _(event):
     session.change_mode("p")
-@rkb.add('q', filter = default_focused)
+@rkb.add('q', filter=default_focused)
 def _(event):
     session.change_mode("q")
 
 
 kb = KeyBindings()
-@kb.add('r', filter = default_focused)
+@kb.add('r', filter=default_focused)
 def _(event):
     session.change_mode("r")
 
@@ -50,5 +50,5 @@ while True:
         sys.exit(0)
     except KeyboardInterrupt:
         pass
-    except Exception as e:
+    except Exception:
         pass

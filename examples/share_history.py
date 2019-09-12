@@ -22,5 +22,5 @@ while True:
         sys.exit(0)
     except KeyboardInterrupt:
         pass
-    except Exception as e:
+    except Exception:
         pass

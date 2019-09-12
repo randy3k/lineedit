@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 import sys
-from lineedit import Mode, ModalPromptSession
+from lineedit import ModalPromptSession
 
 session = ModalPromptSession()
 session.register_mode("p", message=lambda: "p> ")
@@ -16,5 +16,5 @@ while True:
         sys.exit(0)
     except KeyboardInterrupt:
         pass
-    except Exception as e:
+    except Exception:
         pass
