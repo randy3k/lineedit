@@ -55,11 +55,6 @@ class Mode(object):
             setattr(self, key, kwargs[key])
 
 
-def ensure_empty(kwargs, name):
-    if name in kwargs and kwargs[name]:
-        raise Exception("{} should not be set.".format(name))
-
-
 class ModalPromptSession(PromptSession):
     _current_mode = None
     _key_bindings = None
@@ -80,8 +75,6 @@ class ModalPromptSession(PromptSession):
         self._backup_settings()
 
     def _check_args(self, kwargs):
-        ensure_empty(kwargs, "message")
-        ensure_empty(kwargs, "key_bindings")
         if "history" in kwargs:
             assert isinstance(kwargs["history"], ModalHistory)
 
