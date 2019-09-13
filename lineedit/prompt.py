@@ -81,7 +81,6 @@ class ModalPromptSession(PromptSession):
 
     def _check_args(self, kwargs):
         ensure_empty(kwargs, "message")
-        ensure_empty(kwargs, "default")
         ensure_empty(kwargs, "key_bindings")
         if "history" in kwargs:
             assert isinstance(kwargs["history"], ModalHistory)
