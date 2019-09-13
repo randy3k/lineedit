@@ -38,6 +38,7 @@ setup(
     extras_require={
         "test": [
             "pytest",
+            "pytest-cov",
             "pyte",
             "pexpect",
             "pywinpty" if sys.platform.startswith("win") else "ptyprocess"

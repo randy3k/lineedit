@@ -1,57 +1,135 @@
-version: 2
+version: 2.1
+
+commands:
+  install-deps:
+    steps:
+      - run:
+          name: Install apt-get dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install git ssh curl bzip2 libffi6 libffi-dev -y
+  install-conda:
+    parameters:
+      python:
+        type: string
+        default: "3.6"
+    steps:
+      - run:
+          name: Install Miniconda
+          command: |
+            if [ $(uname) == "Darwin" ]; then
+              curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o /tmp/miniconda.sh
+            else
+              curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
+            fi
+            bash /tmp/miniconda.sh -b -f -p $HOME/miniconda
+            if [ "<<parameters.python>>" == "3.4" ]; then
+              $HOME/miniconda/bin/conda create --name myenv python=<<parameters.python>> -c conda-forge
+            else
+              $HOME/miniconda/bin/conda create --name myenv python=<<parameters.python>>
+            fi
+  test:
+    steps:
+      - run:
+          name: Install and test
+          command: |
+            source $HOME/miniconda/bin/activate myenv
+            python -m pip install -e .[test]
+            pytest --cov=lineedit
+            python -m pip install codecov
+            codecov
 
 jobs:
-  test-py27:
+  linux-test:
+    parameters:
+      python:
+        type: string
     docker:
-      - image: circleci/python:2.7-jessie
+      - image: circleci/python
+    steps:
+      - install-deps
+      - checkout
+      - install-conda:
+          python: <<parameters.python>>
+      - test
+  osx-test:
+    parameters:
+      python:
+        type: string
+    macos:
+      xcode: "10.0.0"
     steps:
       - checkout
-      - run: |
-          sudo pip install -e .[test]
-          pytest
-  test-py35:
-    docker:
-      - image: circleci/python:3.5-jessie-node
-    steps:
-      - checkout
-      - run: |
-          sudo pip install -e .[test]
-          pytest
-  deploy-to-pypi:
+      - install-conda:
+          python: <<parameters.python>>
+      - test
+  upload-tarball:
     docker:
       - image: circleci/python
     steps:
       - checkout
-      - run:
-          name: init .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = randy3k" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run: sudo python -m pip install twine
       - run: |
           python setup.py sdist
-          sudo pip install twine
           twine upload dist/*
-
 
 workflows:
   version: 2
   build:
     jobs:
-      - test-py27:
+      - linux-test:
+          name: linux-py27
+          python: "2.7"
           filters:
             tags:
               only: /^v.*/
-      - test-py35:
+      - linux-test:
+          name: linux-py34
+          python: "3.4"
           filters:
             tags:
               only: /^v.*/
-      - deploy-to-pypi:
+      - linux-test:
+          name: linux-py35
+          python: "3.5"
+          filters:
+            tags:
+              only: /^v.*/
+      - linux-test:
+          name: linux-py36
+          python: "3.6"
+          filters:
+            tags:
+              only: /^v.*/
+      - linux-test:
+          name: linux-py37
+          python: "3.7"
+          filters:
+            tags:
+              only: /^v.*/
+      - osx-test:
+          name: osx-py27
+          python: "2.7"
+          filters:
+            tags:
+              only: /^v.*/
+      - osx-test:
+          name: osx-py37
+          python: "3.7"
+          filters:
+            tags:
+              only: /^v.*/
+      - upload-tarball:
           requires:
-            - test-py27
-            - test-py35
+            - linux-py27
+            - linux-py34
+            - linux-py35
+            - linux-py36
+            - linux-py37
+            - osx-py27
+            - osx-py37
           filters:
-            tags:
-              only: /^v.*/
             branches:
               ignore: /.*/
+            tags:
+              only: /^v.*/
