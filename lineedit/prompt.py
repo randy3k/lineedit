@@ -126,12 +126,12 @@ class ModalPromptSession(PromptSession):
             history=self.history,
             auto_suggest=DynamicAutoSuggest(lambda: self.auto_suggest),
             accept_handler=accept,
-            tempfile_suffix=lambda: self.tempfile_suffix)
-
-    def _create_application(self, *args, **kwargs):
-        app = super(ModalPromptSession, self)._create_application(*args, **kwargs)
-        app.session = self
-        return app
+            tempfile_suffix=lambda: self.tempfile_suffix,
+            session_change_mode=self.change_mode,
+            session_current_mode=lambda: self.current_mode,
+            history_search_no_duplicates=self.history_search_no_duplicates,
+            get_add_history=lambda: self.add_history,
+            )
 
     @property
     def current_mode_name(self):
