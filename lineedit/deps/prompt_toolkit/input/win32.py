@@ -1,22 +1,30 @@
 from __future__ import unicode_literals
-from ctypes import windll, pointer
-from ctypes.wintypes import DWORD
-from six.moves import range
-from contextlib import contextmanager
 
-from .ansi_escape_sequences import REVERSE_ANSI_SEQUENCES
-from .base import Input
+import msvcrt
+import os
+import sys
+from contextlib import contextmanager
+from ctypes import pointer, windll
+from ctypes.wintypes import DWORD, HANDLE
+
+import six
+from six.moves import range
+
 from prompt_toolkit.eventloop import get_event_loop
 from prompt_toolkit.eventloop.win32 import wait_for_handles
 from prompt_toolkit.key_binding.key_processor import KeyPress
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.mouse_events import MouseEventType
-from prompt_toolkit.win32_types import EventTypes, KEY_EVENT_RECORD, MOUSE_EVENT_RECORD, INPUT_RECORD, STD_INPUT_HANDLE
+from prompt_toolkit.win32_types import (
+    INPUT_RECORD,
+    KEY_EVENT_RECORD,
+    MOUSE_EVENT_RECORD,
+    STD_INPUT_HANDLE,
+    EventTypes,
+)
 
-import msvcrt
-import os
-import sys
-import six
+from .ansi_escape_sequences import REVERSE_ANSI_SEQUENCES
+from .base import Input
 
 __all__ = [
     'Win32Input',
@@ -67,10 +75,11 @@ class Win32Input(Input):
         return cooked_mode()
 
     def fileno(self):
-        """
-        The windows console doesn't depend on the file handle.
-        """
-        raise NotImplementedError
+        # The windows console doesn't depend on the file handle, so
+        # this is not used for the event loop (which uses the
+        # handle instead). But it's used in `Application.run_system_command`
+        # which opens a subprocess with a given stdin/stdout.
+        return sys.stdin.fileno()
 
     def typeahead_hash(self):
         return 'win32-input'
@@ -172,10 +181,10 @@ class ConsoleInputReader(object):
         # When stdin is a tty, use that handle, otherwise, create a handle from
         # CONIN$.
         if sys.stdin.isatty():
-            self.handle = windll.kernel32.GetStdHandle(STD_INPUT_HANDLE)
+            self.handle = HANDLE(windll.kernel32.GetStdHandle(STD_INPUT_HANDLE))
         else:
             self._fdcon = os.open('CONIN$', os.O_RDWR | os.O_BINARY)
-            self.handle = msvcrt.get_osfhandle(self._fdcon)
+            self.handle = HANDLE(msvcrt.get_osfhandle(self._fdcon))
 
     def close(self):
         " Close fdcon. "
@@ -456,7 +465,7 @@ class raw_mode(object):
     `raw_input` method of `.vt100_input`.
     """
     def __init__(self, fileno=None):
-        self.handle = windll.kernel32.GetStdHandle(STD_INPUT_HANDLE)
+        self.handle = HANDLE(windll.kernel32.GetStdHandle(STD_INPUT_HANDLE))
 
     def __enter__(self):
         # Remember original mode.
@@ -486,7 +495,7 @@ class cooked_mode(raw_mode):
     ::
 
         with cooked_mode(stdin):
-            ''' the pseudo-terminal stdin is now used in raw mode '''
+            ''' The pseudo-terminal stdin is now used in cooked mode. '''
     """
     def _patch(self):
         # Set cooked.

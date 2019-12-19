@@ -8,16 +8,18 @@ http://pygments.org/
 """
 from __future__ import unicode_literals
 
+import array
+import errno
+import sys
+
+import six
+from six.moves import range
+
 from prompt_toolkit.layout.screen import Size
 from prompt_toolkit.output import Output
 from prompt_toolkit.styles.base import ANSI_COLOR_NAMES
 
 from .color_depth import ColorDepth
-
-from six.moves import range
-import array
-import errno
-import six
 
 __all__ = [
     'Vt100_Output',
@@ -222,11 +224,14 @@ class _256ColorCache(dict):
         match = 0
 
         for i, (r2, g2, b2) in enumerate(self.colors):
-            d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2
+            if i >= 16:  # XXX: We ignore the 16 ANSI colors when mapping RGB
+                         # to the 256 colors, because these highly depend on
+                         # the color scheme of the terminal.
+                d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2
 
-            if d < distance:
-                match = i
-                distance = d
+                if d < distance:
+                    match = i
+                    distance = d
 
         # Turn color name into code.
         self[value] = match
@@ -377,6 +382,9 @@ class Vt100_Output(Output):
     :param write_binary: Encode the output before writing it. If `True` (the
         default), the `stdout` object is supposed to expose an `encoding` attribute.
     """
+    _fds_not_a_terminal = set()  # For the error messages. Only display "Output
+                                 # is not a terminal" once per file descriptor.
+
     def __init__(self, stdout, get_size, term=None, write_binary=True):
         assert callable(get_size)
         assert term is None or isinstance(term, six.text_type)
@@ -406,11 +414,26 @@ class Vt100_Output(Output):
         (This will take the dimensions by reading the pseudo
         terminal attributes.)
         """
-        assert stdout.isatty()
+        # Normally, this requires a real TTY device, but people instantiate
+        # this class often during unit tests as well. For convenience, we print
+        # an error message, use standard dimensions, and go on.
+        isatty = stdout.isatty()
+        fd = stdout.fileno()
+
+        if not isatty and fd not in cls._fds_not_a_terminal:
+            msg = 'Warning: Output is not to a terminal (fd=%r).\n'
+            sys.stderr.write(msg % fd)
+            cls._fds_not_a_terminal.add(fd)
 
         def get_size():
-            rows, columns = _get_size(stdout.fileno())
-            return Size(rows=rows, columns=columns)
+            # If terminal (incorrectly) reports its size as 0, pick a
+            # reasonable default.  See
+            # https://github.com/ipython/ipython/issues/10071
+            rows, columns = (None, None)
+
+            if isatty:
+                rows, columns = _get_size(stdout.fileno())
+            return Size(rows=rows or 24, columns=columns or 80)
 
         return cls(stdout, get_size, term=term)
 

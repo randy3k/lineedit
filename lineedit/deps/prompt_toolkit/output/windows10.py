@@ -1,13 +1,14 @@
 from __future__ import unicode_literals
 
-from prompt_toolkit.utils import is_windows
+from ctypes import byref, windll
+from ctypes.wintypes import DWORD, HANDLE
+
 from prompt_toolkit.renderer import Output
+from prompt_toolkit.utils import is_windows
 from prompt_toolkit.win32_types import STD_OUTPUT_HANDLE
+
 from .vt100 import Vt100_Output
 from .win32 import Win32Output
-
-from ctypes import windll, byref
-from ctypes.wintypes import DWORD
 
 __all__ = [
     'Windows10_Output',
@@ -25,7 +26,7 @@ class Windows10_Output(object):
     def __init__(self, stdout):
         self.win32_output = Win32Output(stdout)
         self.vt100_output = Vt100_Output(stdout, lambda: None)
-        self._hconsole = windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        self._hconsole = HANDLE(windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE))
 
     def flush(self):
         """
@@ -67,7 +68,7 @@ def is_win_vt100_enabled():
     if not is_windows():
         return False
 
-    hconsole = windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+    hconsole = HANDLE(windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE))
 
     # Get original console mode.
     original_mode = DWORD(0)

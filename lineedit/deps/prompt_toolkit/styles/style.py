@@ -1,16 +1,26 @@
 """
 Tool for creating styles from a dictionary.
 """
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
+
 import itertools
 import re
 import sys
-from .base import BaseStyle, DEFAULT_ATTRS, ANSI_COLOR_NAMES, ANSI_COLOR_NAMES_ALIASES, Attrs
-from .named_colors import NAMED_COLORS
+
 from prompt_toolkit.cache import SimpleCache
+
+from .base import (
+    ANSI_COLOR_NAMES,
+    ANSI_COLOR_NAMES_ALIASES,
+    DEFAULT_ATTRS,
+    Attrs,
+    BaseStyle,
+)
+from .named_colors import NAMED_COLORS
 
 __all__ = [
     'Style',
+    'parse_color',
     'Priority',
     'merge_styles',
 ]
@@ -19,7 +29,7 @@ _named_colors_lowercase = dict(
     (k.lower(), v.lstrip('#')) for k, v in NAMED_COLORS.items())
 
 
-def _colorformat(text):
+def parse_color(text):
     """
     Parse/validate color format.
 
@@ -141,11 +151,11 @@ def _parse_style_str(style_str):
 
         # Colors.
         elif part.startswith('bg:'):
-            attrs = attrs._replace(bgcolor=_colorformat(part[3:]))
+            attrs = attrs._replace(bgcolor=parse_color(part[3:]))
         elif part.startswith('fg:'):  # The 'fg:' prefix is optional.
-            attrs = attrs._replace(color=_colorformat(part[3:]))
+            attrs = attrs._replace(color=parse_color(part[3:]))
         else:
-            attrs = attrs._replace(color=_colorformat(part))
+            attrs = attrs._replace(color=parse_color(part))
 
     return attrs
 

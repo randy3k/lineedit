@@ -1,6 +1,10 @@
 from __future__ import unicode_literals
-import six
+
 import xml.dom.minidom as minidom
+
+import six
+
+from .base import FormattedText
 
 __all__ = [
     'HTML'
@@ -79,7 +83,7 @@ class HTML(object):
 
         process_node(document)
 
-        self.formatted_text = result
+        self.formatted_text = FormattedText(result)
 
     def __repr__(self):
         return 'HTML(%r)' % (self.value, )

@@ -2,10 +2,13 @@
 Wrapper for the layout.
 """
 from __future__ import unicode_literals
-from .controls import UIControl, BufferControl
-from .containers import Container, Window, to_container, ConditionalContainer
-from prompt_toolkit.buffer import Buffer
+
 import six
+
+from prompt_toolkit.buffer import Buffer
+
+from .containers import ConditionalContainer, Container, Window, to_container
+from .controls import BufferControl, UIControl
 
 __all__ = [
     'Layout',
@@ -49,7 +52,7 @@ class Layout(object):
             self.focus(focused_element)
 
         # List of visible windows.
-        self.visible_windows = []  # type: List[Window]
+        self.visible_windows = []  # List of `Window` objects.
 
     def __repr__(self):
         return 'Layout(%r, current_window=%r)' % (

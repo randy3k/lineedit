@@ -1,9 +1,12 @@
 from __future__ import unicode_literals
+
+import sys
+
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.eventloop.context import TaskLocal, TaskLocalNotSetError
 from prompt_toolkit.utils import is_windows
+
 from .base import Input
-import sys
 
 __all__ = [
     'create_input',
@@ -64,7 +67,7 @@ def get_default_input():
 
 def set_default_input(input):
     """
-    Set the default `Output` class.
+    Set the default `Input` class.
 
     (Used for instance, for the telnet submodule.)
     """

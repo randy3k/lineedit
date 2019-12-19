@@ -18,12 +18,13 @@ Multiple applications can run in the body of the context manager, one after the
 other.
 """
 from __future__ import unicode_literals
+
+import sys
+import threading
+from contextlib import contextmanager
+
 from .application import run_in_terminal
 from .eventloop import get_event_loop
-
-from contextlib import contextmanager
-import threading
-import sys
 
 __all__ = [
     'patch_stdout',
@@ -87,6 +88,11 @@ class StdoutProxy(object):
         Write the given text to stdout and flush.
         If an application is running, use `run_in_terminal`.
         """
+        if not text:
+            # Don't bother calling `run_in_terminal` when there is nothing to
+            # display.
+            return
+
         def write_and_flush():
             self.original_stdout.write(text)
             self.original_stdout.flush()
@@ -138,3 +144,10 @@ class StdoutProxy(object):
         """
         with self._lock:
             self._flush()
+
+    def fileno(self):
+        """
+        Return file descriptor.
+        """
+        # This is important for code that expects sys.stdout.fileno() to work.
+        return self.original_stdout.fileno()

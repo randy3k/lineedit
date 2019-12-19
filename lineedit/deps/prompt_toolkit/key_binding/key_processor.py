@@ -7,20 +7,23 @@ The `KeyProcessor` will according to the implemented keybindings call the
 correct callbacks when new key presses are feed through `feed`.
 """
 from __future__ import unicode_literals
-from prompt_toolkit.application.current import get_app
-from prompt_toolkit.buffer import EditReadOnlyBuffer
-from prompt_toolkit.filters.app import vi_navigation_mode
-from prompt_toolkit.keys import Keys, ALL_KEYS
-from prompt_toolkit.utils import Event
-from prompt_toolkit.eventloop import run_in_executor, call_from_executor
 
-from .key_bindings import KeyBindingsBase
-
-from collections import deque
-from six.moves import range
-import six
 import time
 import weakref
+from collections import deque
+
+import six
+from six.moves import range
+
+from prompt_toolkit.application.current import get_app
+from prompt_toolkit.buffer import EditReadOnlyBuffer
+from prompt_toolkit.enums import EditingMode
+from prompt_toolkit.eventloop import call_from_executor, run_in_executor
+from prompt_toolkit.filters.app import vi_navigation_mode
+from prompt_toolkit.keys import ALL_KEYS, Keys
+from prompt_toolkit.utils import Event
+
+from .key_bindings import KeyBindingsBase
 
 __all__ = [
     'KeyProcessor',
@@ -304,6 +307,7 @@ class KeyProcessor(object):
         app = get_app()
         was_recording_emacs = app.emacs_state.is_recording
         was_recording_vi = bool(app.vi_state.recording_register)
+        was_temporary_navigation_mode = app.vi_state.temporary_navigation_mode
         arg = self.arg
         self.arg = None
 
@@ -323,8 +327,11 @@ class KeyProcessor(object):
 
         except EditReadOnlyBuffer:
             # When a key binding does an attempt to change a buffer which is
-            # read-only, we can just silently ignore that.
-            pass
+            # read-only, we can ignore that. We sound a bell and go on.
+            app.output.bell()
+
+        if was_temporary_navigation_mode:
+            self._leave_vi_temp_navigation_mode(event)
 
         self._previous_key_sequence = key_sequence
         self._previous_handler = handler
@@ -345,7 +352,7 @@ class KeyProcessor(object):
         never put the cursor after the last character of a line. (Unless it's
         an empty line.)
         """
-        app = get_app()
+        app = event.app
         buff = app.current_buffer
         preferred_column = buff.preferred_column
 
@@ -357,6 +364,18 @@ class KeyProcessor(object):
             # Set the preferred_column for arrow up/down again.
             # (This was cleared after changing the cursor position.)
             buff.preferred_column = preferred_column
+
+    def _leave_vi_temp_navigation_mode(self, event):
+        """
+        If we're in Vi temporary navigation (normal) mode, return to
+        insert/replace mode after executing one action.
+        """
+        app = event.app
+
+        if app.editing_mode == EditingMode.VI:
+            # Not waiting for a text object and no argument has been given.
+            if app.vi_state.operator_func is None and self.arg is None:
+                app.vi_state.temporary_navigation_mode = False
 
     def _start_timeout(self):
         """

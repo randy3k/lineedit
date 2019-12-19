@@ -4,11 +4,15 @@ Margin implementations for a :class:`~prompt_toolkit.layout.containers.Window`.
 from __future__ import unicode_literals
 
 from abc import ABCMeta, abstractmethod
+
 from six import with_metaclass
 from six.moves import range
 
 from prompt_toolkit.filters import to_filter
-from prompt_toolkit.formatted_text import fragment_list_to_text, to_formatted_text
+from prompt_toolkit.formatted_text import (
+    fragment_list_to_text,
+    to_formatted_text,
+)
 from prompt_toolkit.utils import get_cwidth
 
 __all__ = [
@@ -144,8 +148,10 @@ class ScrollbarMargin(Margin):
 
     :param display_arrows: Display scroll up/down arrows.
     """
-    def __init__(self, display_arrows=False):
+    def __init__(self, display_arrows=False, up_arrow_symbol='^', down_arrow_symbol='v'):
         self.display_arrows = to_filter(display_arrows)
+        self.up_arrow_symbol = up_arrow_symbol
+        self.down_arrow_symbol = down_arrow_symbol
 
     def get_width(self, ui_content):
         return 1
@@ -175,7 +181,7 @@ class ScrollbarMargin(Margin):
             result = []
             if display_arrows:
                 result.extend([
-                    ('class:scrollbar.arrow', '^'),
+                    ('class:scrollbar.arrow', self.up_arrow_symbol),
                     ('class:scrollbar', '\n')
                 ])
 
@@ -202,16 +208,24 @@ class ScrollbarMargin(Margin):
 
             # Down arrow
             if display_arrows:
-                result.append(('class:scrollbar.arrow', 'v'))
+                result.append(('class:scrollbar.arrow', self.down_arrow_symbol))
 
             return result
 
 
 class PromptMargin(Margin):
     """
+    [Deprecated]
+
     Create margin that displays a prompt.
     This can display one prompt at the first line, and a continuation prompt
     (e.g, just dots) on all the following lines.
+
+    This `PromptMargin` implementation has been largely superseded in favor of
+    the `get_line_prefix` attribute of `Window`. The reason is that a margin is
+    always a fixed width, while `get_line_prefix` can return a variable width
+    prefix in front of every line, making it more powerful, especially for line
+    continuations.
 
     :param get_prompt: Callable returns formatted text or a list of
         `(style_str, type)` tuples to be shown as the prompt at the first line.

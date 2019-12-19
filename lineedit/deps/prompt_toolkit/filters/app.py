@@ -2,11 +2,14 @@
 Filters that accept a `Application` as argument.
 """
 from __future__ import unicode_literals
-from .base import Condition
+
+import six
+
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.cache import memoized
 from prompt_toolkit.enums import EditingMode
-import six
+
+from .base import Condition
 
 __all__ = [
     'has_arg',
@@ -202,6 +205,7 @@ def vi_navigation_mode():
         return False
 
     return (app.vi_state.input_mode == InputMode.NAVIGATION or
+            app.vi_state.temporary_navigation_mode or
             app.current_buffer.read_only())
 
 
@@ -214,6 +218,7 @@ def vi_insert_mode():
             or app.vi_state.operator_func
             or app.vi_state.waiting_for_digraph
             or app.current_buffer.selection_state
+            or app.vi_state.temporary_navigation_mode
             or app.current_buffer.read_only()):
         return False
 
@@ -229,6 +234,7 @@ def vi_insert_multiple_mode():
             or app.vi_state.operator_func
             or app.vi_state.waiting_for_digraph
             or app.current_buffer.selection_state
+            or app.vi_state.temporary_navigation_mode
             or app.current_buffer.read_only()):
         return False
 
@@ -244,6 +250,7 @@ def vi_replace_mode():
             or app.vi_state.operator_func
             or app.vi_state.waiting_for_digraph
             or app.current_buffer.selection_state
+            or app.vi_state.temporary_navigation_mode
             or app.current_buffer.read_only()):
         return False
 

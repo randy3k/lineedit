@@ -1,9 +1,13 @@
 from __future__ import unicode_literals
-from prompt_toolkit.output.vt100 import FG_ANSI_COLORS, BG_ANSI_COLORS
+
+from prompt_toolkit.output.vt100 import BG_ANSI_COLORS, FG_ANSI_COLORS
 from prompt_toolkit.output.vt100 import _256_colors as _256_colors_table
 
+from .base import FormattedText
+
 __all__ = [
-    'ANSI'
+    'ANSI',
+    'ansi_escape',
 ]
 
 
@@ -23,7 +27,7 @@ class ANSI(object):
     """
     def __init__(self, value):
         self.value = value
-        self._formatted_text = []
+        self._formatted_text = FormattedText()
 
         # Default style attributes.
         self._color = None
@@ -157,7 +161,7 @@ class ANSI(object):
                 n = attrs.pop()
 
                 # 256 colors.
-                if n == 5 and len(attrs) > 1:
+                if n == 5 and len(attrs) >= 1:
                     if attr == 38:
                         m = attrs.pop()
                         self._color = _256_colors.get(m)
@@ -166,7 +170,7 @@ class ANSI(object):
                         self._bgcolor = _256_colors.get(m)
 
                 # True colors.
-                if n == 2 and len(attrs) > 3:
+                if n == 2 and len(attrs) >= 3:
                     try:
                         color_str = '%02x%02x%02x' % (
                             attrs.pop(), attrs.pop(), attrs.pop())
@@ -208,6 +212,17 @@ class ANSI(object):
     def __pt_formatted_text__(self):
         return self._formatted_text
 
+    def format(self, *args, **kwargs):
+        """
+        Like `str.format`, but make sure that the arguments are properly
+        escaped. (No ANSI escapes can be injected.)
+        """
+        # Escape all the arguments.
+        args = [ansi_escape(a) for a in args]
+        kwargs = dict((k, ansi_escape(v)) for k, v in kwargs.items())
+
+        return ANSI(self.value.format(*args, **kwargs))
+
 
 # Mapping of the ANSI color codes to their names.
 _fg_colors = dict((v, k) for k, v in FG_ANSI_COLORS.items())
@@ -218,3 +233,10 @@ _256_colors = {}
 
 for i, (r, g, b) in enumerate(_256_colors_table.colors):
     _256_colors[i] = '#%02x%02x%02x' % (r, g, b)
+
+
+def ansi_escape(text):
+    """
+    Replace characters with a special meaning.
+    """
+    return text.replace('\x1b', '?').replace('\b', '?')

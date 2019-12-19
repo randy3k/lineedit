@@ -2,7 +2,16 @@
 Tools for running functions on the terminal above the current application or prompt.
 """
 from __future__ import unicode_literals
-from prompt_toolkit.eventloop import get_event_loop, ensure_future, Return, run_in_executor, From, Future
+
+from prompt_toolkit.eventloop import (
+    From,
+    Future,
+    Return,
+    ensure_future,
+    get_event_loop,
+    run_in_executor,
+)
+
 from .current import get_app
 
 __all__ = [
@@ -72,6 +81,12 @@ def run_coroutine_in_terminal(async_func, render_cli_done=False):
         # Wait for the previous `run_in_terminal` to finish.
         if previous_run_in_terminal_f is not None:
             yield previous_run_in_terminal_f
+
+        # Wait for all CPRs to arrive. We don't want to detach the input until
+        # all cursor position responses have been arrived. Otherwise, the tty
+        # will echo its input and can show stuff like ^[[39;1R.
+        if app.input.responds_to_cpr:
+            yield From(app.renderer.wait_for_cpr_responses())
 
         # Draw interface in 'done' state, or erase.
         if render_cli_done:

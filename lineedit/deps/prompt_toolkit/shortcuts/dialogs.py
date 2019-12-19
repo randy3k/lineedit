@@ -1,15 +1,31 @@
 from __future__ import unicode_literals
+
 import functools
+
 from prompt_toolkit.application import Application
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.eventloop import run_in_executor
-from prompt_toolkit.key_binding.bindings.focus import focus_next, focus_previous
+from prompt_toolkit.key_binding.bindings.focus import (
+    focus_next,
+    focus_previous,
+)
 from prompt_toolkit.key_binding.defaults import load_key_bindings
-from prompt_toolkit.key_binding.key_bindings import KeyBindings, merge_key_bindings
+from prompt_toolkit.key_binding.key_bindings import (
+    KeyBindings,
+    merge_key_bindings,
+)
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import HSplit
 from prompt_toolkit.layout.dimension import Dimension as D
-from prompt_toolkit.widgets import ProgressBar, Dialog, Button, Label, Box, TextArea, RadioList
+from prompt_toolkit.widgets import (
+    Box,
+    Button,
+    Dialog,
+    Label,
+    ProgressBar,
+    RadioList,
+    TextArea,
+)
 
 __all__ = [
     'yes_no_dialog',
@@ -70,6 +86,7 @@ def input_dialog(title='', text='', ok_text='OK', cancel_text='Cancel',
     """
     def accept(buf):
         get_app().layout.focus(ok_button)
+        return True  # Keep text.
 
     def ok_handler():
         get_app().exit(result=textfield.text)
@@ -113,7 +130,10 @@ def message_dialog(title='', text='', ok_text='Ok', style=None, async_=False):
 def radiolist_dialog(title='', text='', ok_text='Ok', cancel_text='Cancel',
                      values=None, style=None, async_=False):
     """
-    Display a simple message box and wait until the user presses enter.
+    Display a simple list of element the user can choose amongst.
+
+    Only one element can be selected at a time using Arrow keys and Enter.
+    The focus can be moved between the list and the Ok/Cancel button with tab.
     """
     def ok_handler():
         get_app().exit(result=radio_list.current_value)

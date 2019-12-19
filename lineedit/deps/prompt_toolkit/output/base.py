@@ -2,8 +2,11 @@
 Interface for an output.
 """
 from __future__ import unicode_literals
+
 from abc import ABCMeta, abstractmethod
+
 from six import with_metaclass
+
 from prompt_toolkit.layout.screen import Size
 
 __all__ = [
@@ -18,8 +21,8 @@ class Output(with_metaclass(ABCMeta, object)):
     :class:`~prompt_toolkit.renderer.Renderer`.
 
     Actual implementations are
-    :class:`~prompt_toolkit.terminal.vt100_output.Vt100_Output` and
-    :class:`~prompt_toolkit.terminal.win32_output.Win32Output`.
+    :class:`~prompt_toolkit.output.vt100.Vt100_Output` and
+    :class:`~prompt_toolkit.output.win32.Win32Output`.
     """
     @abstractmethod
     def fileno(self):

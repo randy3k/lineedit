@@ -1,42 +1,69 @@
 from __future__ import unicode_literals
 
+import os
+import re
+import signal
+import sys
+import time
+from subprocess import Popen
+from traceback import format_tb
+
+import six
+
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.cache import SimpleCache
 from prompt_toolkit.clipboard import Clipboard, InMemoryClipboard
 from prompt_toolkit.enums import EditingMode
-from prompt_toolkit.eventloop import get_event_loop, ensure_future, Return, run_in_executor, run_until_complete, call_from_executor, From
+from prompt_toolkit.eventloop import (
+    From,
+    Return,
+    call_from_executor,
+    ensure_future,
+    get_event_loop,
+    run_in_executor,
+    run_until_complete,
+)
 from prompt_toolkit.eventloop.base import get_traceback_from_context
-from prompt_toolkit.filters import to_filter, Condition
+from prompt_toolkit.filters import Condition, to_filter
 from prompt_toolkit.input.base import Input
 from prompt_toolkit.input.defaults import get_default_input
-from prompt_toolkit.input.typeahead import store_typeahead, get_typeahead
-from prompt_toolkit.key_binding.bindings.page_navigation import load_page_navigation_bindings
+from prompt_toolkit.input.typeahead import get_typeahead, store_typeahead
+from prompt_toolkit.key_binding.bindings.page_navigation import (
+    load_page_navigation_bindings,
+)
 from prompt_toolkit.key_binding.defaults import load_key_bindings
-from prompt_toolkit.key_binding.key_bindings import KeyBindings, ConditionalKeyBindings, KeyBindingsBase, merge_key_bindings, GlobalOnlyKeyBindings
-from prompt_toolkit.key_binding.key_processor import KeyProcessor
 from prompt_toolkit.key_binding.emacs_state import EmacsState
+from prompt_toolkit.key_binding.key_bindings import (
+    ConditionalKeyBindings,
+    GlobalOnlyKeyBindings,
+    KeyBindings,
+    KeyBindingsBase,
+    merge_key_bindings,
+)
+from prompt_toolkit.key_binding.key_processor import KeyProcessor
 from prompt_toolkit.key_binding.vi_state import ViState
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout.controls import BufferControl
 from prompt_toolkit.layout.dummy import create_dummy_layout
 from prompt_toolkit.layout.layout import Layout, walk
-from prompt_toolkit.output import Output, ColorDepth
+from prompt_toolkit.output import ColorDepth, Output
 from prompt_toolkit.output.defaults import get_default_output
 from prompt_toolkit.renderer import Renderer, print_formatted_text
 from prompt_toolkit.search import SearchState
-from prompt_toolkit.styles import BaseStyle, default_ui_style, default_pygments_style, merge_styles, DynamicStyle, DummyStyle
+from prompt_toolkit.styles import (
+    BaseStyle,
+    DummyStyle,
+    DummyStyleTransformation,
+    DynamicStyle,
+    StyleTransformation,
+    default_pygments_style,
+    default_ui_style,
+    merge_styles,
+)
 from prompt_toolkit.utils import Event, in_main_thread
-from .current import set_app
-from .run_in_terminal import run_in_terminal, run_coroutine_in_terminal
 
-from subprocess import Popen
-from traceback import format_tb
-import os
-import re
-import signal
-import six
-import sys
-import time
+from .current import set_app
+from .run_in_terminal import run_coroutine_in_terminal, run_in_terminal
 
 __all__ = [
     'Application',
@@ -111,7 +138,9 @@ class Application(object):
         app.run()
     """
     def __init__(self, layout=None,
-                 style=None, include_default_pygments_style=True,
+                 style=None,
+                 include_default_pygments_style=True,
+                 style_transformation=None,
                  key_bindings=None, clipboard=None,
                  full_screen=False, color_depth=None,
                  mouse_support=False,
@@ -150,6 +179,7 @@ class Application(object):
                 color_depth in ColorDepth._ALL), 'Got color_depth: %r' % (color_depth, )
         assert isinstance(editing_mode, six.string_types)
         assert style is None or isinstance(style, BaseStyle)
+        assert style_transformation is None or isinstance(style_transformation, StyleTransformation)
         assert isinstance(erase_when_done, bool)
         assert min_redraw_interval is None or isinstance(min_redraw_interval, (float, int))
         assert max_render_postpone_time is None or isinstance(max_render_postpone_time, (float, int))
@@ -162,10 +192,14 @@ class Application(object):
         assert output is None or isinstance(output, Output)
         assert input is None or isinstance(input, Input)
 
-        self.style = style
-
         if layout is None:
             layout = create_dummy_layout()
+
+        if style_transformation is None:
+            style_transformation = DummyStyleTransformation()
+
+        self.style = style
+        self.style_transformation = style_transformation
 
         # Key bindings.
         self.key_bindings = key_bindings
@@ -233,6 +267,7 @@ class Application(object):
         self.renderer = Renderer(
             self._merged_style,
             self.output,
+            self.input,
             full_screen=full_screen,
             mouse_support=mouse_support,
             cpr_not_supported_callback=self.cpr_not_supported_callback)
@@ -450,7 +485,7 @@ class Application(object):
         # Remove all the original event handlers. (Components can be removed
         # from the UI.)
         for ev in self._invalidate_events:
-            ev -= self.invalidate
+            ev -= self._invalidate_handler
 
         # Gather all new events.
         # (All controls are able to invalidate themselves.)
@@ -461,12 +496,18 @@ class Application(object):
 
         self._invalidate_events = list(gather_events())
 
-        # Attach invalidate event handler.
-        def invalidate(sender):
-            self.invalidate()
-
         for ev in self._invalidate_events:
-            ev += invalidate
+            ev += self._invalidate_handler
+
+    def _invalidate_handler(self, sender):
+        """
+        Handler for invalidate events coming from UIControls.
+
+        (This handles the difference in signature between event handler and
+        `self.invalidate`. It also needs to be a method -not a nested
+        function-, so that we can remove it again .)
+        """
+        self.invalidate()
 
     def _on_resize(self):
         """
@@ -510,7 +551,7 @@ class Application(object):
                 application.run_async().to_asyncio_future())
 
         """
-        assert not self._is_running
+        assert not self._is_running, 'Application is already running.'
 
         def _run_async():
             " Coroutine. "
@@ -609,6 +650,15 @@ class Application(object):
                             # yield.
                             self._is_running = False
 
+                            # Detach event handlers for invalidate events.
+                            # (Important when a UIControl is embedded in
+                            # multiple applications, like ptterm in pymux. An
+                            # invalidate should not trigger a repaint in
+                            # terminated applications.)
+                            for ev in self._invalidate_events:
+                                ev -= self._invalidate_handler
+                            self._invalidate_events = []
+
                             # Wait for CPR responses.
                             if self.input.responds_to_cpr:
                                 yield From(self.renderer.wait_for_cpr_responses())
@@ -634,7 +684,11 @@ class Application(object):
                     f = From(_run_async())
                     result = yield f
                 finally:
-                    assert not self._is_running
+                    # Set the `_is_running` flag to `False`. Normally this
+                    # happened already in the finally block in `run_async`
+                    # above, but in case of exceptions, that's not always the
+                    # case.
+                    self._is_running = False
                 raise Return(result)
 
         return ensure_future(_run_async2())
@@ -711,8 +765,13 @@ class Application(object):
         """
         assert result is None or exception is None
 
+        if self.future is None:
+            raise Exception(
+                'Application is not running. Application.exit() failed.')
+
         if self.future.done():
-            raise Exception('Return value already set.')
+            raise Exception(
+                'Return value already set. Application.exit() failed.')
 
         self.exit_style = style
 
@@ -806,7 +865,12 @@ class Application(object):
         :param text: List of ``(style_str, text)`` tuples.
         :param style: Style class to use. Defaults to the active style in the CLI.
         """
-        print_formatted_text(self.output, text, style or self._merged_style, self.color_depth)
+        print_formatted_text(
+            output=self.output,
+            formatted_text=text,
+            style=style or self._merged_style,
+            color_depth=self.color_depth,
+            style_transformation=self.style_transformation)
 
     @property
     def is_running(self):

@@ -10,7 +10,7 @@ from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding.key_bindings import DynamicKeyBindings, merge_key_bindings
 from prompt_toolkit.validation import DynamicValidator
 
-from prompt_toolkit.shortcuts.prompt import _true, CompleteStyle
+from prompt_toolkit.shortcuts.prompt import is_true, CompleteStyle
 from prompt_toolkit import PromptSession
 from .buffer import ModalBuffer
 from .history import ModalHistory, ModalInMemoryHistory
@@ -104,17 +104,12 @@ class ModalPromptSession(PromptSession):
             """ Accept the content of the default buffer. This is called when
             the validation succeeds. """
             self.app.exit(result=buff.document.text)
-
-            # Reset content before running again.
-            self.app.pre_run_callables.append(buff.reset)
+            return True  # Keep text, we call 'reset' later on.
 
         return ModalBuffer(
             name=DEFAULT_BUFFER,
-                # Make sure that complete_while_typing is disabled when
-                # enable_history_search is enabled. (First convert to Filter,
-                # to avoid doing bitwise operations on bool objects.)
             complete_while_typing=Condition(lambda:
-                _true(self.complete_while_typing) and not
+                is_true(self.complete_while_typing) and not
                 self.complete_style == CompleteStyle.READLINE_LIKE),
             validate_while_typing=dyncond('validate_while_typing'),
             enable_history_search=dyncond('enable_history_search'),
@@ -130,7 +125,7 @@ class ModalPromptSession(PromptSession):
             session_change_mode=self.change_mode,
             session_current_mode=lambda: self.current_mode,
             history_search_no_duplicates=self.history_search_no_duplicates,
-            get_add_history=lambda: self.add_history,
+            get_add_history=lambda: self.add_history
             )
 
     @property

@@ -1,8 +1,10 @@
 from __future__ import unicode_literals
-from .base import Always, Never, Filter
+
+from .base import Always, Filter, Never
 
 __all__ = [
     'to_filter',
+    'is_true',
 ]
 
 _always = Always()
@@ -21,3 +23,12 @@ def to_filter(bool_or_filter):
         True: _always,
         False: _never,
     }.get(bool_or_filter, bool_or_filter)
+
+
+def is_true(value):
+    """
+    Test whether `value` is True. In case of a Filter, call it.
+
+    :param value: Boolean or `Filter` instance.
+    """
+    return to_filter(value)()

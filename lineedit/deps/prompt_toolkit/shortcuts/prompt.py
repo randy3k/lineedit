@@ -26,6 +26,13 @@ Example::
 """
 from __future__ import unicode_literals
 
+import contextlib
+import threading
+import time
+from functools import partial
+
+from six import text_type
+
 from prompt_toolkit.application import Application
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.auto_suggest import DynamicAutoSuggest
@@ -34,36 +41,88 @@ from prompt_toolkit.clipboard import DynamicClipboard, InMemoryClipboard
 from prompt_toolkit.completion import DynamicCompleter, ThreadedCompleter
 from prompt_toolkit.document import Document
 from prompt_toolkit.enums import DEFAULT_BUFFER, SEARCH_BUFFER, EditingMode
-from prompt_toolkit.eventloop import ensure_future, Return, From, get_event_loop
-from prompt_toolkit.filters import is_done, has_focus, renderer_height_is_known, to_filter, Condition, has_arg
-from prompt_toolkit.formatted_text import to_formatted_text, merge_formatted_text
+from prompt_toolkit.eventloop import (
+    From,
+    Return,
+    ensure_future,
+    get_event_loop,
+)
+from prompt_toolkit.filters import (
+    Condition,
+    has_arg,
+    has_focus,
+    is_done,
+    is_true,
+    renderer_height_is_known,
+    to_filter,
+)
+from prompt_toolkit.formatted_text import (
+    fragment_list_to_text,
+    merge_formatted_text,
+    to_formatted_text,
+)
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input.defaults import get_default_input
-from prompt_toolkit.key_binding.bindings.auto_suggest import load_auto_suggest_bindings
-from prompt_toolkit.key_binding.bindings.completion import display_completions_like_readline
-from prompt_toolkit.key_binding.bindings.open_in_editor import load_open_in_editor_bindings
-from prompt_toolkit.key_binding.key_bindings import KeyBindings, DynamicKeyBindings, merge_key_bindings, ConditionalKeyBindings, KeyBindingsBase
+from prompt_toolkit.key_binding.bindings.auto_suggest import (
+    load_auto_suggest_bindings,
+)
+from prompt_toolkit.key_binding.bindings.completion import (
+    display_completions_like_readline,
+)
+from prompt_toolkit.key_binding.bindings.open_in_editor import (
+    load_open_in_editor_bindings,
+)
+from prompt_toolkit.key_binding.key_bindings import (
+    ConditionalKeyBindings,
+    DynamicKeyBindings,
+    KeyBindings,
+    KeyBindingsBase,
+    merge_key_bindings,
+)
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import Window, HSplit, FloatContainer, Float
+from prompt_toolkit.layout import Float, FloatContainer, HSplit, Window
 from prompt_toolkit.layout.containers import ConditionalContainer, WindowAlign
-from prompt_toolkit.layout.controls import BufferControl, SearchBufferControl, FormattedTextControl
+from prompt_toolkit.layout.controls import (
+    BufferControl,
+    FormattedTextControl,
+    SearchBufferControl,
+)
 from prompt_toolkit.layout.dimension import Dimension
 from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.layout.margins import PromptMargin, ConditionalMargin
-from prompt_toolkit.layout.menus import CompletionsMenu, MultiColumnCompletionsMenu
-from prompt_toolkit.layout.processors import DynamicProcessor, PasswordProcessor, ConditionalProcessor, AppendAutoSuggestion, HighlightIncrementalSearchProcessor, HighlightSelectionProcessor, DisplayMultipleCursors, BeforeInput, ReverseSearchProcessor, ShowArg, merge_processors
+from prompt_toolkit.layout.menus import (
+    CompletionsMenu,
+    MultiColumnCompletionsMenu,
+)
+from prompt_toolkit.layout.processors import (
+    AppendAutoSuggestion,
+    ConditionalProcessor,
+    DisplayMultipleCursors,
+    DynamicProcessor,
+    HighlightIncrementalSearchProcessor,
+    HighlightSelectionProcessor,
+    PasswordProcessor,
+    ReverseSearchProcessor,
+    merge_processors,
+)
 from prompt_toolkit.layout.utils import explode_text_fragments
 from prompt_toolkit.lexers import DynamicLexer
 from prompt_toolkit.output.defaults import get_default_output
-from prompt_toolkit.styles import BaseStyle, DynamicStyle
-from prompt_toolkit.utils import suspend_to_background_supported
+from prompt_toolkit.styles import (
+    BaseStyle,
+    ConditionalStyleTransformation,
+    DynamicStyle,
+    DynamicStyleTransformation,
+    StyleTransformation,
+    SwapLightAndDarkStyleTransformation,
+    merge_style_transformations,
+)
+from prompt_toolkit.utils import get_cwidth, suspend_to_background_supported
 from prompt_toolkit.validation import DynamicValidator
-from prompt_toolkit.widgets.toolbars import ValidationToolbar, SystemToolbar, SearchToolbar
-from six import text_type
-
-import contextlib
-import threading
-import time
+from prompt_toolkit.widgets.toolbars import (
+    SearchToolbar,
+    SystemToolbar,
+    ValidationToolbar,
+)
 
 __all__ = [
     'PromptSession',
@@ -116,11 +175,6 @@ class _RPrompt(Window):
             FormattedTextControl(get_formatted_text),
             align=WindowAlign.RIGHT,
             style='class:rprompt')
-
-
-def _true(value):
-    " Test whether `value` is True. In case of a Filter, call it. "
-    return to_filter(value)()
 
 
 class CompleteStyle:
@@ -191,6 +245,13 @@ class PromptSession(object):
         true, but it is recommended to be disabled if another Pygments style is
         passed as the `style` argument, otherwise, two Pygments styles will be
         merged.
+    :param style_transformation:
+        :class:`~prompt_toolkit.style.StyleTransformation` instance.
+    :param swap_light_and_dark_colors: `bool` or
+        :class:`~prompt_toolkit.filters.Filter`. When enabled, apply
+        :class:`~prompt_toolkit.style.SwapLightAndDarkStyleTransformation`.
+        This is useful for switching between dark and light terminal
+        backgrounds.
     :param enable_system_prompt: `bool` or
         :class:`~prompt_toolkit.filters.Filter`. Pressing Meta+'!' will show
         a system prompt.
@@ -208,14 +269,12 @@ class PromptSession(object):
         return formatted text.
     :param prompt_continuation: Text that needs to be displayed for a multiline
         prompt continuation. This can either be formatted text or a callable
-        that takes a `width`, `line_number` and `is_soft_wrap` as input and
-        returns formatted text.
+        that takes a `prompt_width`, `line_number` and `wrap_count` as input
+        and returns formatted text.
     :param complete_style: ``CompleteStyle.COLUMN``,
         ``CompleteStyle.MULTI_COLUMN`` or ``CompleteStyle.READLINE_LIKE``.
     :param mouse_support: `bool` or :class:`~prompt_toolkit.filters.Filter`
         to enable mouse support.
-    :param default: The default input text to be shown. (This can be edited by
-        the user).
     :param refresh_interval: (number; in seconds) When given, refresh the UI
         every so many seconds.
     :param inputhook: None or an Inputhook callable that takes an
@@ -224,19 +283,19 @@ class PromptSession(object):
     _fields = (
         'message', 'lexer', 'completer', 'complete_in_thread', 'is_password',
         'editing_mode', 'key_bindings', 'is_password', 'bottom_toolbar',
-        'style', 'color_depth', 'include_default_pygments_style', 'rprompt',
+        'style', 'style_transformation', 'swap_light_and_dark_colors',
+        'color_depth', 'include_default_pygments_style', 'rprompt',
         'multiline', 'prompt_continuation', 'wrap_lines',
         'enable_history_search', 'search_ignore_case', 'complete_while_typing',
         'validate_while_typing', 'complete_style', 'mouse_support',
         'auto_suggest', 'clipboard', 'validator', 'refresh_interval',
-        'input_processors', 'default', 'enable_system_prompt',
-        'enable_suspend', 'enable_open_in_editor', 'reserve_space_for_menu',
-        'tempfile_suffix', 'inputhook')
+        'input_processors', 'enable_system_prompt', 'enable_suspend',
+        'enable_open_in_editor', 'reserve_space_for_menu', 'tempfile_suffix',
+        'inputhook')
 
     def __init__(
             self,
             message='',
-            default='',
             multiline=False,
             wrap_lines=True,
             is_password=False,
@@ -257,6 +316,8 @@ class PromptSession(object):
             complete_style=None,
             auto_suggest=None,
             style=None,
+            style_transformation=None,
+            swap_light_and_dark_colors=False,
             color_depth=None,
             include_default_pygments_style=True,
             history=None,
@@ -275,6 +336,7 @@ class PromptSession(object):
             input=None,
             output=None):
         assert style is None or isinstance(style, BaseStyle)
+        assert style_transformation is None or isinstance(style_transformation, StyleTransformation)
         assert input_processors is None or isinstance(input_processors, list)
         assert key_bindings is None or isinstance(key_bindings, KeyBindingsBase)
 
@@ -332,6 +394,7 @@ class PromptSession(object):
             """ Accept the content of the default buffer. This is called when
             the validation succeeds. """
             self.app.exit(result=buff.document.text)
+            return True  # Keep text, we call 'reset' later on.
 
         return Buffer(
             name=DEFAULT_BUFFER,
@@ -339,8 +402,8 @@ class PromptSession(object):
                 # enable_history_search is enabled. (First convert to Filter,
                 # to avoid doing bitwise operations on bool objects.)
             complete_while_typing=Condition(lambda:
-                _true(self.complete_while_typing) and not
-                _true(self.enable_history_search) and not
+                is_true(self.complete_while_typing) and not
+                is_true(self.enable_history_search) and not
                 self.complete_style == CompleteStyle.READLINE_LIKE),
             validate_while_typing=dyncond('validate_while_typing'),
             enable_history_search=dyncond('enable_history_search'),
@@ -382,14 +445,6 @@ class PromptSession(object):
 
             # Users can insert processors here.
             DynamicProcessor(lambda: merge_processors(self.input_processors or [])),
-
-            # For single line mode, show the prompt before the input.
-            ConditionalProcessor(
-                merge_processors([
-                    BeforeInput(get_prompt_text_2),
-                    ShowArg(),
-                ]),
-                ~dyncond('multiline'))
         ]
 
         # Create bottom toolbars.
@@ -411,7 +466,6 @@ class PromptSession(object):
             buffer=search_buffer,
             input_processors=[
                 ReverseSearchProcessor(),
-                ShowArg(),
             ],
             ignore_case=dyncond('search_ignore_case'))
 
@@ -420,7 +474,7 @@ class PromptSession(object):
 
         def get_search_buffer_control():
             " Return the UIControl to be focused when searching start. "
-            if _true(self.multiline):
+            if is_true(self.multiline):
                 return search_toolbar.control
             else:
                 return search_buffer_control
@@ -436,14 +490,8 @@ class PromptSession(object):
         default_buffer_window = Window(
             default_buffer_control,
             height=self._get_default_buffer_control_height,
-            left_margins=[
-                # In multiline mode, use the window margin to display
-                # the prompt and continuation fragments.
-                ConditionalMargin(
-                    PromptMargin(get_prompt_text_2, self._get_continuation),
-                    filter=dyncond('multiline'),
-                )
-            ],
+            get_line_prefix=partial(
+                self._get_line_prefix, get_prompt_text_2=get_prompt_text_2),
             wrap_lines=dyncond('wrap_lines'))
 
         @Condition
@@ -474,8 +522,12 @@ class PromptSession(object):
                 ]),
                 [
                     # Completion menus.
+                    # NOTE: Especially the multi-column menu needs to be
+                    #       transparent, because the shape is not always
+                    #       rectangular due to the meta-text below the menu.
                     Float(xcursor=True,
                           ycursor=True,
+                          transparent=True,
                           content=CompletionsMenu(
                               max_height=16,
                               scroll_offset=1,
@@ -483,6 +535,7 @@ class PromptSession(object):
                                   ~multi_column_complete_style)),
                     Float(xcursor=True,
                           ycursor=True,
+                          transparent=True,
                           content=MultiColumnCompletionsMenu(
                               show_meta=True,
                               extra_filter=has_focus(default_buffer) &
@@ -524,6 +577,13 @@ class PromptSession(object):
         application = Application(
             layout=self.layout,
             style=DynamicStyle(lambda: self.style),
+            style_transformation=merge_style_transformations([
+                DynamicStyleTransformation(lambda: self.style_transformation),
+                ConditionalStyleTransformation(
+                    SwapLightAndDarkStyleTransformation(),
+                    dyncond('swap_light_and_dark_colors'),
+                ),
+            ]),
             include_default_pygments_style=dyncond('include_default_pygments_style'),
             clipboard=DynamicClipboard(lambda: self.clipboard),
             key_bindings=merge_key_bindings([
@@ -551,7 +611,7 @@ class PromptSession(object):
         # 'multiline' property dynamic.
         '''
         def on_render(app):
-            multiline = _true(self.multiline)
+            multiline = is_true(self.multiline)
             current_control = app.layout.current_control
 
             if multiline:
@@ -578,7 +638,7 @@ class PromptSession(object):
 
         @Condition
         def do_accept():
-            return (not _true(self.multiline) and
+            return (not is_true(self.multiline) and
                     self.app.layout.has_focus(DEFAULT_BUFFER))
 
         @handle('enter', filter=do_accept & default_focused)
@@ -652,23 +712,27 @@ class PromptSession(object):
             done[0] = True
 
     def prompt(
-            self, message=None,
+            self,
             # When any of these arguments are passed, this value is overwritten
-            # for the current prompt.
-            default='', editing_mode=None,
-            refresh_interval=None, vi_mode=None, lexer=None, completer=None,
-            complete_in_thread=None, is_password=None, key_bindings=None,
-            bottom_toolbar=None, style=None, color_depth=None,
-            include_default_pygments_style=None, rprompt=None, multiline=None,
-            prompt_continuation=None, wrap_lines=None,
-            enable_history_search=None, search_ignore_case=None,
-            complete_while_typing=None, validate_while_typing=None,
-            complete_style=None, auto_suggest=None, validator=None,
-            clipboard=None, mouse_support=None, input_processors=None,
-            reserve_space_for_menu=None, enable_system_prompt=None,
-            enable_suspend=None, enable_open_in_editor=None,
-            tempfile_suffix=None, inputhook=None,
-            async_=False, accept_default=False):
+            # in this PromptSession.
+            message=None,  # `message` should go first, because people call it
+                           # as positional argument.
+            editing_mode=None, refresh_interval=None, vi_mode=None, lexer=None,
+            completer=None, complete_in_thread=None, is_password=None,
+            key_bindings=None, bottom_toolbar=None, style=None,
+            color_depth=None, include_default_pygments_style=None,
+            style_transformation=None, swap_light_and_dark_colors=None,
+            rprompt=None, multiline=None, prompt_continuation=None,
+            wrap_lines=None, enable_history_search=None,
+            search_ignore_case=None, complete_while_typing=None,
+            validate_while_typing=None, complete_style=None, auto_suggest=None,
+            validator=None, clipboard=None, mouse_support=None,
+            input_processors=None, reserve_space_for_menu=None,
+            enable_system_prompt=None, enable_suspend=None,
+            enable_open_in_editor=None, tempfile_suffix=None, inputhook=None,
+
+            # Following arguments are specific to the current `prompt()` call.
+            async_=False, default='', accept_default=False, pre_run=None):
         """
         Display the prompt. All the arguments are a subset of the
         :class:`~.PromptSession` class itself.
@@ -677,13 +741,23 @@ class PromptSession(object):
         (for abort) and ``EOFError`` when control-d has been pressed (for
         exit).
 
+        Additional arguments, specific for this prompt:
+
         :param async_: When `True` return a `Future` instead of waiting for the
             prompt to finish.
+        :param default: The default input text to be shown. (This can be edited
+            by the user).
         :param accept_default: When `True`, automatically accept the default
             value without allowing the user to edit the input.
+        :param pre_run: Callable, called at the start of `Application.run`.
         """
-        # Backup original settings.
-        backup = dict((name, getattr(self, name)) for name in self._fields)
+        assert isinstance(default, text_type)
+
+        # NOTE: We used to create a backup of the PromptSession attributes and
+        #       restore them after exiting the prompt. This code has been
+        #       removed, because it was confusing and didn't really serve a use
+        #       case. (People were changing `Application.editing_mode`
+        #       dynamically and surprised that it was reset after every call.)
 
         # Take settings from 'prompt'-arguments.
         for name in self._fields:
@@ -694,12 +768,10 @@ class PromptSession(object):
         if vi_mode:
             self.editing_mode = EditingMode.VI
 
-        def restore():
-            " Restore original settings. "
-            for name in self._fields:
-                setattr(self, name, backup[name])
+        def pre_run2():
+            if pre_run:
+                pre_run()
 
-        def pre_run():
             if accept_default:
                 # Validate and handle input. We use `call_from_executor` in
                 # order to run it "soon" (during the next iteration of the
@@ -710,20 +782,14 @@ class PromptSession(object):
 
         def run_sync():
             with self._auto_refresh_context():
-                try:
-                    self.default_buffer.reset(Document(self.default))
-                    return self.app.run(inputhook=self.inputhook, pre_run=pre_run)
-                finally:
-                    restore()
+                self.default_buffer.reset(Document(default))
+                return self.app.run(inputhook=self.inputhook, pre_run=pre_run2)
 
         def run_async():
             with self._auto_refresh_context():
-                try:
-                    self.default_buffer.reset(Document(self.default))
-                    result = yield From(self.app.run_async(pre_run=pre_run))
-                    raise Return(result)
-                finally:
-                    restore()
+                self.default_buffer.reset(Document(default))
+                result = yield From(self.app.run_async(pre_run=pre_run2))
+                raise Return(result)
 
         if async_:
             return ensure_future(run_async())
@@ -761,25 +827,46 @@ class PromptSession(object):
     def _get_prompt(self):
         return to_formatted_text(self.message, style='class:prompt')
 
-    def _get_continuation(self, width, line_number, is_soft_wrap):
+    def _get_continuation(self, width, line_number, wrap_count):
         """
         Insert the prompt continuation.
 
-        :param width: The width that's available for the continuation (don't
-            exceed this).
+        :param width: The width that was used for the prompt. (more or less can
+            be used.)
         :param line_number:
-        :param is_soft_wrap: True when we got a soft wrap here instead of a
-            hard line ending.
+        :param wrap_count: Amount of times that the line has been wrapped.
         """
         prompt_continuation = self.prompt_continuation
 
         if callable(prompt_continuation):
-            prompt_continuation = prompt_continuation(width, line_number, is_soft_wrap)
+            prompt_continuation = prompt_continuation(width, line_number, wrap_count)
+
+        # When the continuation prompt is not given, choose the same width as
+        # the actual prompt.
+        if not prompt_continuation and is_true(self.multiline):
+            prompt_continuation = ' ' * width
 
         return to_formatted_text(
             prompt_continuation, style='class:prompt-continuation')
 
+    def _get_line_prefix(self, line_number, wrap_count, get_prompt_text_2):
+        """
+        Return whatever needs to be inserted before every line.
+        (the prompt, or a line continuation.)
+        """
+        # First line: display the "arg" or the prompt.
+        if line_number == 0 and wrap_count == 0:
+            if not is_true(self.multiline) and get_app().key_processor.arg is not None:
+                return self._inline_arg()
+            else:
+                return get_prompt_text_2()
+
+        # For the next lines, display the appropriate continuation.
+        prompt_width = get_cwidth(fragment_list_to_text(get_prompt_text_2()))
+        return self._get_continuation(prompt_width, line_number, wrap_count)
+
     def _get_arg_text(self):
+        " 'arg' toolbar, for in multiline mode. "
         arg = self.app.key_processor.arg
         if arg == '-':
             arg = '-1'
@@ -788,6 +875,20 @@ class PromptSession(object):
             ('class:arg-toolbar', 'Repeat: '),
             ('class:arg-toolbar.text', arg)
         ]
+
+    def _inline_arg(self):
+        " 'arg' prefix, for in single line mode. "
+        app = get_app()
+        if app.key_processor.arg is None:
+            return []
+        else:
+            arg = app.key_processor.arg
+
+            return [
+                ('class:prompt.arg', '(arg: '),
+                ('class:prompt.arg.text', str(arg)),
+                ('class:prompt.arg', ') '),
+            ]
 
 
 def prompt(*a, **kw):
@@ -821,7 +922,6 @@ def create_confirm_session(message, suffix=' (y/n) '):
 
     @bindings.add('n')
     @bindings.add('N')
-    @bindings.add('c-c')
     def no(event):
         session.default_buffer.text = 'n'
         event.app.exit(result=False)

@@ -7,24 +7,41 @@ import inspect
 import socket
 import sys
 
-from six import int2byte, text_type, binary_type
+from six import binary_type, int2byte, text_type
 
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.application.run_in_terminal import run_in_terminal
-from prompt_toolkit.eventloop import get_event_loop, ensure_future, Future, From
+from prompt_toolkit.eventloop import (
+    From,
+    Future,
+    ensure_future,
+    get_event_loop,
+)
 from prompt_toolkit.eventloop.context import context
 from prompt_toolkit.formatted_text import to_formatted_text
 from prompt_toolkit.input.defaults import set_default_input
-from prompt_toolkit.input.vt100 import PipeInput
+from prompt_toolkit.input.posix_pipe import PosixPipeInput
 from prompt_toolkit.layout.screen import Size
 from prompt_toolkit.output.defaults import set_default_output
 from prompt_toolkit.output.vt100 import Vt100_Output
-from prompt_toolkit.renderer import print_formatted_text as print_formatted_text
+from prompt_toolkit.renderer import \
+    print_formatted_text as print_formatted_text
 from prompt_toolkit.styles import DummyStyle
 
 from .log import logger
-from .protocol import IAC, DO, LINEMODE, SB, MODE, SE, WILL, ECHO, NAWS, SUPPRESS_GO_AHEAD
-from .protocol import TelnetProtocolParser
+from .protocol import (
+    DO,
+    ECHO,
+    IAC,
+    LINEMODE,
+    MODE,
+    NAWS,
+    SB,
+    SE,
+    SUPPRESS_GO_AHEAD,
+    WILL,
+    TelnetProtocolParser,
+)
 
 __all__ = [
     'TelnetServer',
@@ -109,7 +126,7 @@ class TelnetConnection(object):
         _initialize_telnet(conn)
 
         # Create input.
-        self.vt100_input = PipeInput()
+        self.vt100_input = PosixPipeInput()
 
         # Create output.
         def get_size():

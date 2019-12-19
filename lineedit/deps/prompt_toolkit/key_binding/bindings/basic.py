@@ -2,12 +2,19 @@
 from __future__ import unicode_literals
 
 from prompt_toolkit.application.current import get_app
-from prompt_toolkit.filters import has_selection, Condition, emacs_insert_mode, vi_insert_mode, in_paste_mode, is_multiline
+from prompt_toolkit.filters import (
+    Condition,
+    emacs_insert_mode,
+    has_selection,
+    in_paste_mode,
+    is_multiline,
+    vi_insert_mode,
+)
 from prompt_toolkit.key_binding.key_processor import KeyPress
 from prompt_toolkit.keys import Keys
 
-from .named_commands import get_by_name
 from ..key_bindings import KeyBindings
+from .named_commands import get_by_name
 
 __all__ = [
     'load_basic_bindings',
@@ -131,9 +138,12 @@ def load_basic_bindings():
     handle(Keys.Any, filter=insert_mode, save_before=if_no_repeat)(
         get_by_name('self-insert'))
     handle('c-t', filter=insert_mode)(get_by_name('transpose-chars'))
-    handle('c-w', filter=insert_mode)(get_by_name('unix-word-rubout'))
     handle('c-i', filter=insert_mode)(get_by_name('menu-complete'))
     handle('s-tab', filter=insert_mode)(get_by_name('menu-complete-backward'))
+
+    # Control-W should delete, using whitespace as separator, while M-Del
+    # should delete using [^a-zA-Z0-9] as a boundary.
+    handle('c-w', filter=insert_mode)(get_by_name('unix-word-rubout'))
 
     handle('pageup', filter= ~has_selection)(get_by_name('previous-history'))
     handle('pagedown', filter= ~has_selection)(get_by_name('next-history'))
