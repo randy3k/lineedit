@@ -23,11 +23,7 @@ commands:
               curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
             fi
             bash /tmp/miniconda.sh -b -f -p $HOME/miniconda
-            if [ "<<parameters.python>>" == "3.4" ]; then
-              $HOME/miniconda/bin/conda create -y --name myenv python=<<parameters.python>> -c conda-forge
-            else
-              $HOME/miniconda/bin/conda create -y --name myenv python=<<parameters.python>>
-            fi
+            $HOME/miniconda/bin/conda create -y --name myenv python=<<parameters.python>>
   test:
     steps:
       - run:
@@ -84,12 +80,6 @@ workflows:
             tags:
               only: /^v.*/
       - linux-test:
-          name: linux-py34
-          python: "3.4"
-          filters:
-            tags:
-              only: /^v.*/
-      - linux-test:
           name: linux-py35
           python: "3.5"
           filters:
@@ -122,7 +112,6 @@ workflows:
       - upload-tarball:
           requires:
             - linux-py27
-            - linux-py34
             - linux-py35
             - linux-py36
             - linux-py37
