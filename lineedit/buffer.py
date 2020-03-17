@@ -189,7 +189,7 @@ class ModalBuffer(Buffer):
 
     def auto_up(self, count=1, go_to_start_of_line_if_history_changes=False):
         self._set_working_mode()
-        if not self._is_last_history() and self._is_end_of_buffer():
+        if not self.complete_state and not self._is_last_history() and self._is_end_of_buffer():
             self.history_backward()
             self.cursor_position = len(self.text)
         else:
@@ -197,7 +197,7 @@ class ModalBuffer(Buffer):
 
     def auto_down(self, count=1, go_to_start_of_line_if_history_changes=False):
         self._set_working_mode()
-        if not self._is_last_history() and self._is_end_of_buffer():
+        if not self.complete_state and not self._is_last_history() and self._is_end_of_buffer():
             self.history_forward()
             self.cursor_position = len(self.text)
         else:
@@ -215,8 +215,11 @@ class ModalBuffer(Buffer):
                 mode_name != self.history.last_mode()):
             self.history.append_string(self.text, mode_name)
 
-    def reset(self, document=None, append_to_history=False):
+    def _reset_searching(self):
         self._is_searching = False
         self.last_search_history = None
         self.search_history = []
+
+    def reset(self, document=None, append_to_history=False):
+        self._reset_searching()
         super(ModalBuffer, self).reset(document, append_to_history)
